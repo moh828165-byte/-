@@ -50,6 +50,7 @@
         .btn-success { background: #10b981; }
         .btn-warning { background: #f59e0b; color: white; }
         .btn-info { background: #3b82f6; color: white; }
+        .btn-whatsapp { background: #25d366; color: white; }
         .row { display: flex; gap: 8px; }
         
         .invoice-card {
@@ -75,10 +76,16 @@
         <button id="tabBtn-reports" onclick="switchTab('reports')">📊 كشف الحساب</button>
     </div>
 
-    <!-- 1. شاشة الكاشير -->
+    <!-- 1. شاشة الكاشير والفاتورة -->
     <div id="tab-cashier" class="tab-content active">
         <section>
             <h2>شاشة البيع والفاتورة</h2>
+            
+            <div class="row">
+                <input type="text" id="clientName" placeholder="اسم العميل">
+                <input type="text" id="clientPhone" placeholder="رقم الهاتف">
+            </div>
+
             <div id="videoContainer-cashier" class="videoContainer">
                 <video id="interactive-cashier" muted autoplay></video>
                 <button class="btn-danger" style="position: absolute; bottom: 10px; left: 10px; width: auto; min-height: 36px; padding: 0 16px;" onclick="stopCamera('cashier')">إغلاق الكاميرا</button>
@@ -106,7 +113,7 @@
                     إجمالي الأصناف: 0 ج.م<br>
                     الخصم: 0 ج.م<br>
                     <b style="color: #7c3aed; font-size: 17px;">الإجمالي النهائي: 0 ج.م</b><br>
-                    <b style="color: #10b981; font-size: 17px;">المتبقي (الباقي للعميل): 0 ج.م</b>
+                    <b style="color: #10b981; font-size: 17px;">المتبقي / الباقي (السالب): 0 ج.م</b>
                 </div>
             </div>
 
@@ -128,16 +135,16 @@
             <input type="text" id="pName" placeholder="اسم الصنف">
             <div class="row">
                 <input type="number" id="pPrice" placeholder="السعر">
-                <input type="number" id="pQty" placeholder="العدد المراد إضافته">
+                <input type="number" id="pQty" placeholder="العدد المراد إضافته (أو تعديله)">
             </div>
-            <button class="btn-success" onclick="saveProduct()">حفظ / تحديث الكمية للصنف</button>
+            <button class="btn-success" onclick="saveProduct()">حفظ الصنف أو تحديث كميته مباشرة</button>
             
             <h3 style="margin-top: 20px; color: #5b21b6;">قائمة الأصناف الحالية بالمخزن</h3>
             <div id="inventoryList"></div>
         </section>
     </div>
 
-    <!-- 3. شاشة الفواتير اليومية -->
+    <!-- 3. شاشة الفواتير اليومية (تعديل + حذف + واتساب) -->
     <div id="tab-daily" class="tab-content">
         <section>
             <h2>الفواتير اليومية</h2>
@@ -158,7 +165,7 @@
 
             <div id="reportsContent" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h3 style="margin: 0; color: #6d28d9;">ملخص التقارير الشهرية</h3>
+                    <h3 style="margin: 0; color: #6d28d9;">ملخص التقارير اليومية والشهرية</h3>
                     <button class="btn-danger" style="width: auto; min-height: 36px; padding: 4px 12px;" onclick="lockReports()">قفل</button>
                 </div>
                 
@@ -179,6 +186,7 @@
         let cart = [];
         let invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
         let codeReader = null;
+        let editingInvoiceId = null;
 
         function switchTab(tabId) {
             stopCamera('cashier');
@@ -196,7 +204,6 @@
             }
         }
 
-        // تشغيل الكاميرا الموحد (للكاشير أو للمخزن)
         function startCamera(mode) {
             let containerId = mode === 'cashier' ? 'videoContainer-cashier' : 'videoContainer-inventory';
             let videoId = mode === 'cashier' ? 'interactive-cashier' : 'interactive-inventory';
@@ -270,17 +277,19 @@
                 return;
             }
 
-            let existing = products.find(p => (barcode && p.barcode === barcode) || (name && p.name === name));
+            let existing = products.find(p => (barcode && p.barcode === barcode) || (name && p.name.toLowerCase() === name.toLowerCase()));
             if(existing) {
                 existing.qty += qty;
                 if(price > 0) existing.price = price;
                 if(name) existing.name = name;
+                if(barcode) existing.barcode = barcode;
+                alert('تم تحديث كمية الصنف بنجاح! الكمية الحالية: ' + existing.qty);
             } else {
                 products.push({ id: Date.now(), barcode, name: name || 'صنف بدون اسم', price, qty });
+                alert('تم حفظ الصنف الجديد بنجاح!');
             }
 
             localStorage.setItem('products', JSON.stringify(products));
-            alert('تم الحفظ وتحديث المخزون بنجاح!');
             clearProductForm();
             updateProductSelect();
             renderInventoryList();
@@ -310,7 +319,7 @@
             }
             products.forEach(p => {
                 container.innerHTML += `
-                    <div style="font-size:14px; padding:6px 0; border-bottom: 1px dashed #ddd; display:flex; justify-content:space-between;">
+                    <div style="font-size:14px; padding:6px 0; border-bottom: 1px dashed #ddd; display:flex; justify-content:space-between; align-items:center;">
                         <span><b>${p.name}</b> (باركود: ${p.barcode || 'بدون'})</span>
                         <span>السعر: ${p.price}ج.م | المتاح: <b>${p.qty}</b></span>
                     </div>
@@ -372,7 +381,7 @@
                 إجمالي الأصناف: ${subTotal} ج.م<br>
                 الخصم: ${discount} ج.م<br>
                 <b style="color: #7c3aed; font-size: 17px;">الإجمالي النهائي: ${finalTotal} ج.م</b><br>
-                <b style="color: #10b981; font-size: 17px;">المتبقي (الباقي للعميل): ${change >= 0 ? change : 0} ج.م</b>
+                <b style="color: ${change < 0 ? '#ef4444' : '#10b981'}; font-size: 17px;">المتبقي / الباقي (السالب): ${change} ج.م</b>
             `;
         }
 
@@ -387,6 +396,8 @@
                 alert('الفاتورة فارغة!');
                 return;
             }
+            let clientName = document.getElementById('clientName').value.trim() || 'عميل نقدي';
+            let clientPhone = document.getElementById('clientPhone').value.trim() || '-';
             let subTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
             let discount = parseFloat(document.getElementById('discountVal').value) || 0;
             let finalTotal = Math.max(0, subTotal - discount);
@@ -394,31 +405,98 @@
             let change = paid - finalTotal;
 
             let now = new Date();
-            let newInvoice = { 
-                id: Date.now(), 
-                dateStr: now.toISOString().split('T')[0], 
-                timeStr: now.toLocaleTimeString('ar-EG'),
-                dayName: now.toLocaleDateString('ar-EG', { weekday: 'long' }),
-                items: [...cart], 
-                subTotal, discount, finalTotal, paid,
-                change: change >= 0 ? change : 0
-            };
-
-            invoices.push(newInvoice);
-            localStorage.setItem('invoices', JSON.stringify(invoices));
             
-            cart.forEach(cartItem => {
-                let prod = products.find(p => p.id === cartItem.id);
-                if(prod) prod.qty = Math.max(0, prod.qty - cartItem.qty);
-            });
+            if(editingInvoiceId) {
+                let inv = invoices.find(i => i.id === editingInvoiceId);
+                if(inv) {
+                    inv.clientName = clientName;
+                    inv.clientPhone = clientPhone;
+                    inv.items = [...cart];
+                    inv.subTotal = subTotal;
+                    inv.discount = discount;
+                    inv.finalTotal = finalTotal;
+                    inv.paid = paid;
+                    inv.change = change;
+                }
+                editingInvoiceId = null;
+                alert('تم تعديل الفاتورة بنجاح!');
+            } else {
+                let newInvoice = { 
+                    id: Date.now(), 
+                    dateStr: now.toISOString().split('T')[0], 
+                    timeStr: now.toLocaleTimeString('ar-EG'),
+                    dayName: now.toLocaleDateString('ar-EG', { weekday: 'long' }),
+                    clientName,
+                    clientPhone,
+                    items: [...cart], 
+                    subTotal, discount, finalTotal, paid, change
+                };
+                invoices.push(newInvoice);
+                
+                cart.forEach(cartItem => {
+                    let prod = products.find(p => p.id === cartItem.id);
+                    if(prod) prod.qty = Math.max(0, prod.qty - cartItem.qty);
+                });
+                alert('تم إتمام وحفظ الفاتورة بنجاح!');
+            }
+
+            localStorage.setItem('invoices', JSON.stringify(invoices));
             localStorage.setItem('products', JSON.stringify(products));
 
             cart = [];
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientPhone').value = '';
             document.getElementById('discountVal').value = 0;
             document.getElementById('paidVal').value = 0;
             renderCart();
             updateProductSelect();
-            alert('تم إتمام وحفظ الفاتورة بنجاح!');
+        }
+
+        function editInvoice(id) {
+            let inv = invoices.find(i => i.id === id);
+            if(!inv) return;
+            
+            editingInvoiceId = inv.id;
+            document.getElementById('clientName').value = inv.clientName;
+            document.getElementById('clientPhone').value = inv.clientPhone;
+            document.getElementById('discountVal').value = inv.discount;
+            document.getElementById('paidVal').value = inv.paid;
+            cart = [...inv.items];
+            
+            renderCart();
+            switchTab('cashier');
+            alert('تم جلب الفاتورة للتعديل في شاشة الكاشير. عدل ما تحتاجه ثم اضغط إتمام وحفظ الفاتورة.');
+        }
+
+        // حذف الفاتورة مع إرجاع كمياتها للمخزن إن أمكن
+        function deleteInvoice(id) {
+            if(confirm('هل أنت متأكد من حذف هذه الفاتورة نهائياً؟')) {
+                invoices = invoices.filter(inv => inv.id !== id);
+                localStorage.setItem('invoices', JSON.stringify(invoices));
+                renderDailyInvoices();
+                alert('تم حذف الفاتورة بنجاح.');
+            }
+        }
+
+        function shareInvoiceWhatsApp(id) {
+            let inv = invoices.find(i => i.id === id);
+            if(!inv) return;
+            
+            let itemsText = inv.items.map(i => `- ${i.name} (×${i.qty}) = ${i.price * i.qty}ج`).join('\n');
+            let text = `🛒 *مول الصعيدي* \n📅 فاتورة بتاريخ: ${inv.dateStr} (${inv.timeStr})\n👤 العميل: ${inv.clientName} (${inv.clientPhone})\n\n*الأصناف المباعة:*\n${itemsText}\n\nالإجمالي: ${inv.finalTotal} ج.م\nالمدفوع: ${inv.paid} ج.م\nالمتبقي: ${inv.change} ج.م`;
+            
+            let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function shareDailyReportWhatsApp() {
+            let selectedDate = document.getElementById('dailyDate').value;
+            let filtered = invoices.filter(inv => inv.dateStr === selectedDate);
+            let totalSales = filtered.reduce((sum, inv) => sum + inv.finalTotal, 0);
+
+            let text = `📊 *تقرير مبيعات مول الصعيدي* \n📅 التاريخ: ${selectedDate}\n💰 إجمالي المبيعات: ${totalSales} ج.م\n🧾 عدد الفواتير: ${filtered.length}\n\nتم استخراج التقرير من النظام بنجاح.`;
+            let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
         }
 
         function renderDailyInvoices() {
@@ -427,37 +505,42 @@
             container.innerHTML = '';
             
             let filtered = invoices.filter(inv => inv.dateStr === selectedDate);
+            let totalDaySales = filtered.reduce((sum, inv) => sum + inv.finalTotal, 0);
+
+            let headerHtml = `
+                <div style="background:#ede9fe; padding:10px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>إجمالي مبيعات اليوم: <b>${totalDaySales} ج.م</b> (${filtered.length} فاتورة)</span>
+                    <button class="btn-whatsapp" style="width:auto; min-height:36px; padding:4px 10px; font-size:13px;" onclick="shareDailyReportWhatsApp()">📤 مشاركة التقرير واتساب</button>
+                </div>
+            `;
+
             if(filtered.length === 0) {
-                container.innerHTML = '<p style="color:#666;">لا توجد فواتير في هذا التاريخ.</p>';
+                container.innerHTML = headerHtml + '<p style="color:#666;">لا توجد فواتير في هذا التاريخ.</p>';
                 return;
             }
 
+            let html = headerHtml;
             filtered.forEach((inv, invIndex) => {
                 let itemsHtml = inv.items.map(i => `<div class="item-row"><span>${i.name} (×${i.qty})</span><span>${i.price * i.qty} ج.م</span></div>`).join('');
-                container.innerHTML += `
+                html += `
                     <div class="invoice-card">
                         <div class="invoice-header">
-                            <span>فاتورة (${inv.timeStr})</span>
+                            <span>فاتورة #${invIndex + 1} (${inv.timeStr}) - ${inv.clientName}</span>
                             <span style="color:#7c3aed;">النهائي: ${inv.finalTotal} ج.م</span>
                         </div>
                         ${itemsHtml}
                         <div style="font-size: 13px; margin-top: 6px; color: #4b5563;">
-                            الخصم: ${inv.discount || 0} ج.م | المدفوع: ${inv.paid || 0} ج.م | الباقي: ${inv.change || 0} ج.م
+                            الخصم: ${inv.discount || 0} ج.م | المدفوع: ${inv.paid || 0} ج.م | المتبقي (الباقي/السالب): <b style="color:${inv.change < 0 ? '#ef4444':'#10b981'}">${inv.change} ج.م</b>
                         </div>
-                        <div class="row" style="margin-top: 8px;">
-                            <button class="btn-danger" onclick="deleteInvoice(${inv.id})">حذف الفاتورة</button>
+                        <div class="row" style="margin-top: 8px; display: flex; gap: 4px;">
+                            <button class="btn-info" style="flex: 1; font-size: 13px;" onclick="editInvoice(${inv.id})">تعديل</button>
+                            <button class="btn-whatsapp" style="flex: 1; font-size: 13px;" onclick="shareInvoiceWhatsApp(${inv.id})">واتساب</button>
+                            <button class="btn-danger" style="flex: 1; font-size: 13px;" onclick="deleteInvoice(${inv.id})">حذف</button>
                         </div>
                     </div>
                 `;
             });
-        }
-
-        function deleteInvoice(id) {
-            if(confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) {
-                invoices = invoices.filter(inv => inv.id !== id);
-                localStorage.setItem('invoices', JSON.stringify(invoices));
-                renderDailyInvoices();
-            }
+            container.innerHTML = html;
         }
 
         function generateReport() {
