@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7c3aed">
+  <title>مول الصعيدي - الكاشير</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, sans-serif; background: #f5f3ff;
+      color: #211b2d; padding: 16px; max-width: 720px; margin-inline: auto;
+    }
+    h1 { margin: 4px 0 16px; font-size: 24px; }
+    h2 { font-size: 18px; margin: 0 0 12px; }
+    section {
+      background: white; padding: 16px; border-radius: 16px;
+      margin: 12px 0; box-shadow: 0 3px 14px #211b2d0d;
+    }
+    input, button {
+      width: 100%; min-height: 46px; margin: 5px 0; padding: 10px 12px;
+      border-radius: 10px; font: inherit;
+    }
+    input { border: 1px solid #ddd6e8; }
+    button {
+      border: 0; color: white; background: #7c3aed; font-weight: 700;
+    }
+    button.secondary { background: #eee8f7; color: #39265a; }
+    button.danger { background: #b42318; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .item {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee;
+    }
+    .item button { width: auto; min-height: 38px; margin: 0; }
+    .muted { color: #71687c; font-size: 14px; }
+    .total { font-size: 21px; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <h1>مول الصعيدي</h1>
+
+  <section>
+    <h2>إضافة منتج</h2>
+    <input id="productName" placeholder="اسم المنتج">
+    <div class="row">
+      <input id="productPrice" type="number" min="0" step="0.01" placeholder="السعر بالجنيه">
+      <input id="productStock" type="number" min="0" step="1" placeholder="الكمية">
+    </div>
+    <input id="productBarcode" placeholder="الباركود (اختياري)">
+    <button onclick="addProduct()">حفظ المنتج</button>
+  </section>
+
+  <section>
+    <h2>الكاشير</h2>
+    <input id="customerName" placeholder="اسم العميل">
+    <input id="customerPhone" type="tel" inputmode="numeric"
+           placeholder="رقم الهاتف بكود الدولة بدون +">
+    <input id="search" placeholder="ابحث بالاسم أو امسح الباركود"
+           oninput="renderProducts()">
+    <div id="products"></div>
+  </section>
+
+  <section>
+    <h2>الفاتورة الحالية</h2>
+    <div id="cart"></div>
+    <p class="total">الإجمالي: <span id="total">0.00</span> جنيه</p>
+    <button onclick="checkout()">إتمام البيع وحفظ الفاتورة</button>
+    <button class="secondary" onclick="shareInvoice()">مشاركة آخر فاتورة</button>
+  </section>
+
+  <section>
+    <h2>آخر الفواتير</h2>
+    <div id="invoices"></div>
+    <p class="muted">الاستبدال خلال 7 أيام، والاسترجاع خلال 3 أيام.</p>
+  </section>
+
+<script>
+  const load = key => {
+    try { return JSON.parse(localStorage.getItem(key) || "[]"); }
+    catch { return []; }
+  };
+
+  let products = load("products");
+  let invoices = load("invoices");
+  let cart = [];
+
+  const money = value => Number(value).toFixed(2);
+
+  function save() {
+    localStorage.setItem("products", JSON.stringify(products));
+    localStorage.setItem("invoices", JSON.stringify(invoices));
+  }
+
+  function addProduct() {
+    const name = document.getElementById("productName").value.trim();
+    const price = Number(document.getElementById("productPrice").value);
+    const stock = Number(document.getElementById("productStock").value);
+    const barcode = document.getElementById("productBarcode").value.trim();
+
+    if (!name || price < 0 || !Number.isFinite(price) ||
+        stock < 0 || !Number.isInteger(stock)) {
+      alert("أدخل اسمًا وسعرًا وكمية صحيحة.");
+      return;
+    }
+    if (barcode && products.some(p => p.barcode === barcode)) {
+      alert("الباركود مسجل لمنتج آخر.");
+      return;
+    }
+
+    products.push({ id: crypto.randomUUID(), name, price, stock, barcode });
+    save();
+    ["productName", "productPrice", "productStock", "productBarcode"]
+      .forEach(id => document.getElementById(id).value = "");
+    renderProducts();
+  }
+
+  function renderProducts() {
+    const query = document.getElementById("search").value.trim().toLowerCase();
+    const list = document.getElementById("products");
+    list.innerHTML = "";
+
+    products
+      .filter(p => !query || p.name.toLowerCase().includes(query) ||
+                   (p.barcode && p.barcode.toLowerCase() === query))
+      .forEach(p => {
+        const row = document.createElement("div");
+        row.className = "item";
+        const info = document.createElement("span");
+        info.textContent = `${p.name} — ${money(p.price)} جنيه — المتاح ${p.stock}`;
+        const add = document.createElement("button");
+        add.textContent = "إضافة";
+        add.disabled = p.stock < 1;
+        add.onclick = () => addToCart(p.id);
+        row.append(info, add);
+        list.append(row);
+      });
+
+    renderCart();
+  }
+
+  function addToCart(id) {
+    const p = products.find(item => item.id === id);
+    if (!p || p.stock < 1) return alert("الكمية غير متاحة.");
+    const line = cart.find(item => item.id === id);
+    if (line) {
+      if (line.qty >= p.stock) return alert("لا توجد كمية إضافية بالمخزون.");
+      line.qty++;
+    } else {
+      cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
+    }
+    renderCart();
+  }
+
+  function renderCart() {
+    const box = document.getElementById("cart");
+    box.innerHTML = "";
+    let sum = 0;
+
+    cart.forEach((line, index) => {
+      sum += line.price * line.qty;
+      const row = document.createElement("div");
+      row.className = "item";
+      const info = document.createElement("span");
+      info.textContent = `${line.name} × ${line.qty} — ${money(line.price * line.qty)} جنيه`;
+      const remove = document.createElement("button");
+      remove.className = "secondary";
+      remove.textContent = "حذف";
+      remove.onclick = () => { cart.splice(index, 1); renderCart(); };
+      row.append(info, remove);
+      box.append(row);
+    });
+    document.getElementById("total").textContent = money(sum);
+  }
+
+  function checkout() {
+    if (!cart.length) return alert("الفاتورة فارغة.");
+
+    for (const line of cart) {
+      const p = products.find(item => item.id === line.id);
+      if (!p || p.stock < line.qty) return alert(`الكمية غير كافية: ${line.name}`);
+    }
+
+    const invoice = {
+      number: Date.now(),
+      customer: document.getElementById("customerName").value.trim(),
+      phone: document.getElementById("customerPhone").value.trim(),
+      date: new Date().toLocaleString("ar-EG"),
+      items: cart.map(item => ({ ...item })),
+      total: cart.reduce((sum, item) => sum + item.price * item.qty, 0)
+    };
+
+    cart.forEach(line => {
+      products.find(p => p.id === line.id).stock -= line.qty;
+    });
+    invoices.unshift(invoice);
+    cart = [];
+    save();
+    renderProducts();
+    renderInvoices();
+    alert("تم حفظ الفاتورة على هذا الجهاز.");
+  }
+
+  function invoiceText(invoice) {
+    const lines = invoice.items.map(item =>
+      `${item.name} × ${item.qty} = ${money(item.price * item.qty)} جنيه`
+    );
+    return [
+      "مول الصعيدي",
+      `رقم الفاتورة: ${invoice.number}`,
+      `العميل: ${invoice.customer || "—"}`,
+      `الهاتف: ${invoice.phone || "—"}`,
+      `التاريخ: ${invoice.date}`,
+      ...lines,
+      `الإجمالي: ${money(invoice.total)} جنيه`,
+      "الاستبدال خلال 7 أيام، والاسترجاع خلال 3 أيام."
+    ].join("\n");
+  }
+
+  async function shareInvoice() {
+    if (!invoices.length) return alert("لا توجد فواتير محفوظة.");
+    const text = invoiceText(invoices[0]);
+    if (navigator.share) {
+      try { await navigator.share({ title: "فاتورة مول الصعيدي", text }); }
+      catch {}
+    } else {
+      await navigator.clipboard.writeText(text);
+      alert("تم نسخ الفاتورة. يمكنك لصقها في واتساب.");
+    }
+  }
+
+  function renderInvoices() {
+    const box = document.getElementById("invoices");
+    box.innerHTML = "";
+    invoices.slice(0, 10).forEach(invoice => {
+      const row = document.createElement("div");
+      row.className = "item";
+      const info = document.createElement("span");
+      info.textContent = `${invoice.date} — ${money(invoice.total)} جنيه`;
+      const share = document.createElement("button");
+      share.textContent = "مشاركة";
+      share.onclick = async () => {
+        const text = invoiceText(invoice);
+        if (navigator.share) {
+          try { await navigator.share({ title: "فاتورة مول الصعيدي", text }); }
+          catch {}
+        } else {
+          await navigator.clipboard.writeText(text);
+          alert("تم نسخ الفاتورة.");
+        }
+      };
+      row.append(info, share);
+      box.append(row);
+    });
+  }
+
+  renderProducts();
+  renderInvoices();
+</script>
+</body>
+</html>
