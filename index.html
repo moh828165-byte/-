@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#7c3aed">
-    <title>مول الصعيدي - الكاشير والتقارير</title>
+    <title>مول الصعيدي - النظام الشامل</title>
     <!-- مكتبة قراءة الباركود عبر الكاميرا -->
     <script src="https://unpkg.com/@zxing/library@latest"></script>
     <style>
@@ -14,13 +14,32 @@
             color: #211b2d; padding: 16px; max-width: 720px; margin-inline: auto;
         }
         h1 { margin: 4px 0 16px; font-size: 24px; color: #6d28d9; text-align: center; }
-        h2 { font-size: 18px; margin: 0 0 12px; color: #5b21b6; }
+        
+        /* شريط التنقل بين الشاشات */
+        .nav-tabs {
+            display: flex; gap: 4px; background: #ede9fe; padding: 6px;
+            border-radius: 14px; margin-bottom: 16px; overflow-x: auto;
+        }
+        .nav-tabs button {
+            flex: 1; min-height: 40px; padding: 8px 10px; font-size: 13px;
+            background: transparent; color: #5b21b6; border: none; border-radius: 10px;
+            font-weight: bold; cursor: pointer; white-space: nowrap;
+        }
+        .nav-tabs button.active {
+            background: #7c3aed; color: white; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
         section {
             background: white; padding: 16px; border-radius: 16px;
-            margin-bottom: 16px; box-shadow: 0 3px 14px rgba(0,0,0,0.06);
+            box-shadow: 0 3px 14px rgba(0,0,0,0.06); margin-bottom: 16px;
         }
+        h2 { font-size: 18px; margin: 0 0 12px; color: #5b21b6; }
+        
         input, button, select {
-            width: 100%; min-height: 48px; margin: 5px 0; padding: 10px 14px;
+            width: 100%; min-height: 48px; margin: 6px 0; padding: 10px 14px;
             border: 1px solid #ddd6e8; border-radius: 12px; font-size: 16px; background: #fff;
         }
         button {
@@ -32,13 +51,15 @@
         .btn-warning { background: #f59e0b; color: white; }
         .btn-info { background: #3b82f6; color: white; }
         .row { display: flex; gap: 8px; }
+        
         .invoice-card {
             border: 1px solid #e9d5ff; padding: 12px; border-radius: 12px; margin-bottom: 10px; background: #faf5ff;
         }
         .invoice-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; }
-        .item-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #f3e8ff; font-size: 14px; align-items: center; }
+        .item-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #f3e8ff; font-size: 14px; align-items: center; }
         .report-box { background: #f3e8ff; border: 1px solid #c084fc; padding: 12px; border-radius: 12px; margin-top: 10px; }
-        #videoContainer { display: none; width: 100%; max-height: 250px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 10px; position: relative; }
+        
+        .videoContainer { display: none; width: 100%; max-height: 250px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 10px; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
@@ -46,110 +67,178 @@
 
     <h1>مول الصعيدي 🛒</h1>
 
-    <!-- قسم إدارة الأصناف والمخزون مع كاميرا الباركود -->
-    <section>
-        <h2>إدارة المخزون والأصناف (بالكاميرا)</h2>
-        <div id="videoContainer">
-            <video id="interactive" muted autoplay></video>
-            <button class="btn-danger" style="position: absolute; bottom: 10px; left: 10px; width: auto; min-height: 36px; padding: 0 16px;" onclick="stopCamera()">إغلاق الكاميرا</button>
-        </div>
-        <button class="btn-info" onclick="startCamera()">📷 فتح الكاميرا لمسح الباركود</button>
-        
-        <input type="text" id="pBarcode" placeholder="باركود الصنف (يظهر تلقائياً عند المسح أو اكتبه)">
-        <input type="text" id="pName" placeholder="اسم الصنف">
-        <div class="row">
-            <input type="number" id="pPrice" placeholder="السعر">
-            <input type="number" id="pQty" placeholder="العدد المراد إضافته">
-        </div>
-        <button class="btn-success" onclick="saveProduct()">حفظ / تحديث الكمية للصنف</button>
-    </section>
+    <!-- شريط الأزرار للانتقال بين الشاشات -->
+    <div class="nav-tabs">
+        <button id="tabBtn-cashier" class="active" onclick="switchTab('cashier')">🛒 الكاشير</button>
+        <button id="tabBtn-inventory" onclick="switchTab('inventory')">📦 المخزن</button>
+        <button id="tabBtn-daily" onclick="switchTab('daily')">📅 الفواتير اليومية</button>
+        <button id="tabBtn-reports" onclick="switchTab('reports')">📊 كشف الحساب</button>
+    </div>
 
-    <!-- قسم المبيعات / الفاتورة المحسّن -->
-    <section>
-        <h2>شاشة الكاشير والفواتير</h2>
-        <input type="text" id="searchBarcode" placeholder="ابحث بالباركود أو اسم الصنف..." oninput="filterAndAddProduct()">
-        <select id="productSelect" onchange="addProductToCart()"></select>
-        
-        <div id="cartList" style="margin-top: 10px;"></div>
-        
-        <div style="background: #faf5ff; padding: 10px; border-radius: 12px; margin-top: 10px; border: 1px solid #e9d5ff;">
-            <div class="row">
-                <input type="number" id="discountVal" placeholder="قيمة الخصم (ج.م)" oninput="renderCart()" value="0">
-                <input type="number" id="paidVal" placeholder="المبلغ المدفوع (ج.م)" oninput="renderCart()" value="0">
+    <!-- 1. شاشة الكاشير -->
+    <div id="tab-cashier" class="tab-content active">
+        <section>
+            <h2>شاشة البيع والفاتورة</h2>
+            <div id="videoContainer-cashier" class="videoContainer">
+                <video id="interactive-cashier" muted autoplay></video>
+                <button class="btn-danger" style="position: absolute; bottom: 10px; left: 10px; width: auto; min-height: 36px; padding: 0 16px;" onclick="stopCamera('cashier')">إغلاق الكاميرا</button>
             </div>
-            <div id="invoiceSummary" style="font-size: 15px; margin-top: 8px; line-height: 1.6;">
-                إجمالي الأصناف: 0 ج.م<br>
-                الخصم: 0 ج.م<br>
-                <b style="color: #7c3aed; font-size: 17px;">الإجمالي النهائي: 0 ج.م</b><br>
-                <b style="color: #10b981; font-size: 17px;">المتبقي (الباقي للعميل): 0 ج.م</b>
-            </div>
-        </div>
+            <button class="btn-info" onclick="startCamera('cashier')">📷 مسح الباركود بالكاميرا للبيع</button>
 
-        <button onclick="checkoutInvoice()" style="margin-top: 10px;">إتمام وحفظ الفاتورة</button>
-    </section>
-
-    <!-- قسم كشف الحساب والتقرير اليومي المحمي بكلمة السر 1760 -->
-    <section>
-        <h2>📊 كشف الحساب والتقارير (محمي)</h2>
-        <div id="passSection">
-            <input type="password" id="reportPass" placeholder="أدخل كلمة السر (1760) لرؤية كشف الحساب">
-            <button class="btn-warning" onclick="unlockReports()">فتح كشف الحساب</button>
-        </div>
-
-        <div id="reportsContent" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #6d28d9;">التقرير اليومي والشهري</h3>
-                <button class="btn-danger" style="width: auto; min-height: 36px; padding: 4px 12px;" onclick="lockReports()">قفل</button>
-            </div>
+            <input type="text" id="searchBarcode" placeholder="ابحث بالباركود أو اسم الصنف..." oninput="filterAndAddProduct()">
+            <select id="productSelect" onchange="addProductToCart()"></select>
             
-            <label style="display:block; margin-top:10px; font-weight:bold;">اختر اليوم لعرض الفواتير:</label>
-            <input type="date" id="reportDate" onchange="generateDailyReport()">
-
-            <div id="dailyReportResult" class="report-box">
-                اختر تاريخاً لعرض كشف حساب اليوم.
+            <div id="cartList" style="margin-top: 10px;"></div>
+            
+            <div style="background: #faf5ff; padding: 12px; border-radius: 12px; margin-top: 10px; border: 1px solid #e9d5ff;">
+                <div class="row">
+                    <div style="flex: 1;">
+                        <label style="font-size: 13px; font-weight: bold; color: #5b21b6; display: block; margin-bottom: 2px;">قيمة الخصم (ج.م):</label>
+                        <input type="number" id="discountVal" placeholder="0" oninput="renderCart()" value="0">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 13px; font-weight: bold; color: #10b981; display: block; margin-bottom: 2px;">المبلغ المدفوع (ج.م):</label>
+                        <input type="number" id="paidVal" placeholder="0" oninput="renderCart()" value="0">
+                    </div>
+                </div>
+                
+                <div id="invoiceSummary" style="font-size: 15px; margin-top: 10px; line-height: 1.6; border-top: 1px dashed #d8b4fe; padding-top: 8px;">
+                    إجمالي الأصناف: 0 ج.م<br>
+                    الخصم: 0 ج.م<br>
+                    <b style="color: #7c3aed; font-size: 17px;">الإجمالي النهائي: 0 ج.م</b><br>
+                    <b style="color: #10b981; font-size: 17px;">المتبقي (الباقي للعميل): 0 ج.م</b>
+                </div>
             </div>
 
-            <h3 style="margin-top: 20px; color: #5b21b6;">سجل الفواتير العام</h3>
-            <div id="invoicesContainer"></div>
-        </div>
-    </section>
+            <button onclick="checkoutInvoice()" style="margin-top: 12px;">إتمام وحفظ الفاتورة</button>
+        </section>
+    </div>
+
+    <!-- 2. شاشة المخزن -->
+    <div id="tab-inventory" class="tab-content">
+        <section>
+            <h2>إدارة المخزن والأصناف</h2>
+            <div id="videoContainer-inventory" class="videoContainer">
+                <video id="interactive-inventory" muted autoplay></video>
+                <button class="btn-danger" style="position: absolute; bottom: 10px; left: 10px; width: auto; min-height: 36px; padding: 0 16px;" onclick="stopCamera('inventory')">إغلاق الكاميرا</button>
+            </div>
+            <button class="btn-info" onclick="startCamera('inventory')">📷 فتح الكاميرا لمسح الباركود</button>
+            
+            <input type="text" id="pBarcode" placeholder="باركود الصنف (يظهر تلقائياً عند المسح)">
+            <input type="text" id="pName" placeholder="اسم الصنف">
+            <div class="row">
+                <input type="number" id="pPrice" placeholder="السعر">
+                <input type="number" id="pQty" placeholder="العدد المراد إضافته">
+            </div>
+            <button class="btn-success" onclick="saveProduct()">حفظ / تحديث الكمية للصنف</button>
+            
+            <h3 style="margin-top: 20px; color: #5b21b6;">قائمة الأصناف الحالية بالمخزن</h3>
+            <div id="inventoryList"></div>
+        </section>
+    </div>
+
+    <!-- 3. شاشة الفواتير اليومية -->
+    <div id="tab-daily" class="tab-content">
+        <section>
+            <h2>الفواتير اليومية</h2>
+            <label style="display:block; margin-bottom:6px; font-weight:bold;">اختر التاريخ:</label>
+            <input type="date" id="dailyDate" onchange="renderDailyInvoices()">
+            <div id="dailyInvoicesContainer" style="margin-top: 10px;"></div>
+        </section>
+    </div>
+
+    <!-- 4. شاشة كشف الحساب والتقارير (محمية بكلمة سر 1760) -->
+    <div id="tab-reports" class="tab-content">
+        <section>
+            <h2>📊 كشف الحساب والتقارير (محمي)</h2>
+            <div id="passSection">
+                <input type="password" id="reportPass" placeholder="أدخل كلمة السر (1760)">
+                <button class="btn-warning" onclick="unlockReports()">فتح كشف الحساب</button>
+            </div>
+
+            <div id="reportsContent" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin: 0; color: #6d28d9;">ملخص التقارير الشهرية</h3>
+                    <button class="btn-danger" style="width: auto; min-height: 36px; padding: 4px 12px;" onclick="lockReports()">قفل</button>
+                </div>
+                
+                <label style="display:block; margin-top:10px; font-weight:bold;">اختر التاريخ للتقرير:</label>
+                <input type="date" id="reportDate" onchange="generateReport()">
+
+                <div id="reportResult" class="report-box">
+                    اختر تاريخاً لعرض تفاصيل الحساب.
+                </div>
+            </div>
+        </section>
+    </div>
 
     <script>
-        const REPORT_PASSWORD = "1760"; // كلمة السر الجديدة المحددة
+        const REPORT_PASSWORD = "1760";
 
         let products = JSON.parse(localStorage.getItem('products') || '[]');
         let cart = [];
         let invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
         let codeReader = null;
 
-        // تشغيل الكاميرا لقراءة الباركود
-        function startCamera() {
-            document.getElementById('videoContainer').style.display = 'block';
+        function switchTab(tabId) {
+            stopCamera('cashier');
+            stopCamera('inventory');
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tabs button').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            document.getElementById('tabBtn-' + tabId).classList.add('active');
+
+            if(tabId === 'inventory') renderInventoryList();
+            if(tabId === 'daily') {
+                document.getElementById('dailyDate').valueAsDate = new Date();
+                renderDailyInvoices();
+            }
+        }
+
+        // تشغيل الكاميرا الموحد (للكاشير أو للمخزن)
+        function startCamera(mode) {
+            let containerId = mode === 'cashier' ? 'videoContainer-cashier' : 'videoContainer-inventory';
+            let videoId = mode === 'cashier' ? 'interactive-cashier' : 'interactive-inventory';
+
+            document.getElementById(containerId).style.display = 'block';
             codeReader = new ZXing.BrowserBarcodeReader();
-            codeReader.decodeFromVideoDevice(null, 'interactive', (result, err) => {
+            codeReader.decodeFromVideoDevice(null, videoId, (result, err) => {
                 if (result) {
                     let scannedCode = result.text;
-                    document.getElementById('pBarcode').value = scannedCode;
-                    
-                    // البحث عما إذا كان الصنف موجوداً مسبقاً لتسهيل إضافته
-                    let existing = products.find(p => p.barcode === scannedCode);
-                    if(existing) {
-                        document.getElementById('pName').value = existing.name;
-                        document.getElementById('pPrice').value = existing.price;
-                        alert('تم التعرف على الصنف: ' + existing.name);
-                    } else {
-                        alert('باركود جديد: ' + scannedCode + ' - أدخل اسمه وسعره لحفظه');
+                    if(mode === 'inventory') {
+                        document.getElementById('pBarcode').value = scannedCode;
+                        let existing = products.find(p => p.barcode === scannedCode);
+                        if(existing) {
+                            document.getElementById('pName').value = existing.name;
+                            document.getElementById('pPrice').value = existing.price;
+                            alert('تم التعرف على الصنف: ' + existing.name);
+                        } else {
+                            alert('باركود جديد: ' + scannedCode + ' - أدخل اسمه وسعره لحفظه');
+                        }
+                    } else if(mode === 'cashier') {
+                        let found = products.find(p => p.barcode === scannedCode);
+                        if(found) {
+                            let cartItem = cart.find(c => c.id == found.id);
+                            if(cartItem) cartItem.qty++;
+                            else cart.push({ ...found, qty: 1 });
+                            renderCart();
+                            alert('تمت إضافة: ' + found.name);
+                        } else {
+                            alert('هذا الباركود غير مسجل بالمخزن: ' + scannedCode);
+                        }
                     }
-                    stopCamera();
+                    stopCamera(mode);
                 }
             }).catch(err => console.error(err));
         }
 
-        function stopCamera() {
-            if(codeReader) {
-                codeReader.reset();
-            }
-            document.getElementById('videoContainer').style.display = 'none';
+        function stopCamera(mode) {
+            if(codeReader) codeReader.reset();
+            let containerCashier = document.getElementById('videoContainer-cashier');
+            let containerInv = document.getElementById('videoContainer-inventory');
+            if(containerCashier) containerCashier.style.display = 'none';
+            if(containerInv) containerInv.style.display = 'none';
         }
 
         function unlockReports() {
@@ -158,8 +247,7 @@
                 document.getElementById('passSection').style.display = 'none';
                 document.getElementById('reportsContent').style.display = 'block';
                 document.getElementById('reportDate').valueAsDate = new Date();
-                generateDailyReport();
-                renderInvoices();
+                generateReport();
             } else {
                 alert('كلمة السر غير صحيحة!');
             }
@@ -178,13 +266,13 @@
             let qty = parseInt(document.getElementById('pQty').value) || 0;
 
             if(!barcode && !name) {
-                alert('يرجى إدخال الباركود أو اسم الصنف على الأقل');
+                alert('يرجى إدخال الباركود أو اسم الصنف');
                 return;
             }
 
             let existing = products.find(p => (barcode && p.barcode === barcode) || (name && p.name === name));
             if(existing) {
-                existing.qty += qty; // زيادة العدد مباشرة للصنف الموجود مسبقاً
+                existing.qty += qty;
                 if(price > 0) existing.price = price;
                 if(name) existing.name = name;
             } else {
@@ -192,9 +280,10 @@
             }
 
             localStorage.setItem('products', JSON.stringify(products));
-            alert('تم حفظ الصنف وتحديث المخزون بنجاح!');
+            alert('تم الحفظ وتحديث المخزون بنجاح!');
             clearProductForm();
             updateProductSelect();
+            renderInventoryList();
         }
 
         function clearProductForm() {
@@ -212,18 +301,31 @@
             });
         }
 
+        function renderInventoryList() {
+            let container = document.getElementById('inventoryList');
+            container.innerHTML = '';
+            if(products.length === 0) {
+                container.innerHTML = '<p style="color:#666;">لا توجد أصناف مسجلة بعد.</p>';
+                return;
+            }
+            products.forEach(p => {
+                container.innerHTML += `
+                    <div style="font-size:14px; padding:6px 0; border-bottom: 1px dashed #ddd; display:flex; justify-content:space-between;">
+                        <span><b>${p.name}</b> (باركود: ${p.barcode || 'بدون'})</span>
+                        <span>السعر: ${p.price}ج.م | المتاح: <b>${p.qty}</b></span>
+                    </div>
+                `;
+            });
+        }
+
         function filterAndAddProduct() {
             let query = document.getElementById('searchBarcode').value.trim().toLowerCase();
             if(!query) return;
-            
             let found = products.find(p => p.barcode === query || p.name.toLowerCase().includes(query));
             if(found) {
                 let cartItem = cart.find(c => c.id == found.id);
-                if(cartItem) {
-                    cartItem.qty++;
-                } else {
-                    cart.push({ ...found, qty: 1 });
-                }
+                if(cartItem) cartItem.qty++;
+                else cart.push({ ...found, qty: 1 });
                 renderCart();
                 document.getElementById('searchBarcode').value = '';
             }
@@ -234,12 +336,8 @@
             if(!id) return;
             let product = products.find(p => p.id == id);
             let cartItem = cart.find(c => c.id == id);
-
-            if(cartItem) {
-                cartItem.qty++;
-            } else {
-                cart.push({ ...product, qty: 1 });
-            }
+            if(cartItem) cartItem.qty++;
+            else cart.push({ ...product, qty: 1 });
             renderCart();
             document.getElementById('productSelect').value = '';
         }
@@ -302,22 +400,16 @@
                 timeStr: now.toLocaleTimeString('ar-EG'),
                 dayName: now.toLocaleDateString('ar-EG', { weekday: 'long' }),
                 items: [...cart], 
-                subTotal,
-                discount,
-                finalTotal,
-                paid,
+                subTotal, discount, finalTotal, paid,
                 change: change >= 0 ? change : 0
             };
 
             invoices.push(newInvoice);
             localStorage.setItem('invoices', JSON.stringify(invoices));
             
-            // خصم الكميات من المخزون الأساسي تلقائياً
             cart.forEach(cartItem => {
                 let prod = products.find(p => p.id === cartItem.id);
-                if(prod) {
-                    prod.qty = Math.max(0, prod.qty - cartItem.qty);
-                }
+                if(prod) prod.qty = Math.max(0, prod.qty - cartItem.qty);
             });
             localStorage.setItem('products', JSON.stringify(products));
 
@@ -326,54 +418,26 @@
             document.getElementById('paidVal').value = 0;
             renderCart();
             updateProductSelect();
-            if(document.getElementById('reportsContent').style.display !== 'none') {
-                generateDailyReport();
-                renderInvoices();
-            }
             alert('تم إتمام وحفظ الفاتورة بنجاح!');
         }
 
-        function generateDailyReport() {
-            let selectedDate = document.getElementById('reportDate').value;
-            if(!selectedDate) return;
-
-            let filteredInvoices = invoices.filter(inv => inv.dateStr === selectedDate);
-            let totalSales = filteredInvoices.reduce((sum, inv) => sum + inv.finalTotal, 0);
-            let dayName = filteredInvoices.length > 0 ? filteredInvoices[0].dayName : '';
-
-            let html = `
-                <h4>📅 كشف يوم: ${selectedDate} ${dayName ? '(' + dayName + ')' : ''}</h4>
-                <p><b>إجمالي مبيعات اليوم:</b> ${totalSales} ج.م</p>
-                <p><b>عدد الفواتير:</b> ${filteredInvoices.length}</p>
-                <hr style="border: 0.5px solid #ddd;">
-            `;
-
-            if(filteredInvoices.length === 0) {
-                html += '<p style="color: #666;">لا توجد فواتير مسجلة في هذا اليوم.</p>';
-            } else {
-                filteredInvoices.forEach((inv, index) => {
-                    let itemsDetail = inv.items.map(i => `${i.name} (×${i.qty})`).join('، ');
-                    html += `
-                        <div style="font-size: 13px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed #c084fc;">
-                            <b>فاتورة #${index + 1} (${inv.timeStr}):</b> النهائي: <b>${inv.finalTotal} ج.م</b> (مدفوع: ${inv.paid}, باقي: ${inv.change})
-                            <br><small style="color: #555;">الأصناف: ${itemsDetail}</small>
-                        </div>
-                    `;
-                });
+        function renderDailyInvoices() {
+            let selectedDate = document.getElementById('dailyDate').value;
+            let container = document.getElementById('dailyInvoicesContainer');
+            container.innerHTML = '';
+            
+            let filtered = invoices.filter(inv => inv.dateStr === selectedDate);
+            if(filtered.length === 0) {
+                container.innerHTML = '<p style="color:#666;">لا توجد فواتير في هذا التاريخ.</p>';
+                return;
             }
 
-            document.getElementById('dailyReportResult').innerHTML = html;
-        }
-
-        function renderInvoices() {
-            let container = document.getElementById('invoicesContainer');
-            container.innerHTML = '';
-            invoices.forEach((inv, invIndex) => {
+            filtered.forEach((inv, invIndex) => {
                 let itemsHtml = inv.items.map(i => `<div class="item-row"><span>${i.name} (×${i.qty})</span><span>${i.price * i.qty} ج.م</span></div>`).join('');
                 container.innerHTML += `
                     <div class="invoice-card">
                         <div class="invoice-header">
-                            <span>فاتورة #${invIndex + 1} (${inv.dayName || ''} ${inv.dateStr} - ${inv.timeStr})</span>
+                            <span>فاتورة (${inv.timeStr})</span>
                             <span style="color:#7c3aed;">النهائي: ${inv.finalTotal} ج.م</span>
                         </div>
                         ${itemsHtml}
@@ -392,9 +456,23 @@
             if(confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) {
                 invoices = invoices.filter(inv => inv.id !== id);
                 localStorage.setItem('invoices', JSON.stringify(invoices));
-                generateDailyReport();
-                renderInvoices();
+                renderDailyInvoices();
             }
+        }
+
+        function generateReport() {
+            let selectedDate = document.getElementById('reportDate').value;
+            if(!selectedDate) return;
+
+            let filtered = invoices.filter(inv => inv.dateStr === selectedDate);
+            let totalSales = filtered.reduce((sum, inv) => sum + inv.finalTotal, 0);
+
+            let html = `
+                <h4>📅 تقارير يوم: ${selectedDate}</h4>
+                <p><b>إجمالي المبيعات:</b> ${totalSales} ج.م</p>
+                <p><b>عدد الفواتير:</b> ${filtered.length}</p>
+            `;
+            document.getElementById('reportResult').innerHTML = html;
         }
 
         updateProductSelect();
