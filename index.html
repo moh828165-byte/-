@@ -51,6 +51,7 @@
         .btn-warning { background: #f59e0b; color: white; }
         .btn-info { background: #3b82f6; color: white; }
         .btn-whatsapp { background: #25d366; color: white; }
+        .btn-print { background: #0ea5e9; color: white; }
         .row { display: flex; gap: 8px; }
         
         .invoice-card {
@@ -62,13 +63,20 @@
         
         .videoContainer { display: none; width: 100%; max-height: 250px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 10px; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* تنسيق مخصص للطباعة الحرارية */
+        @media print {
+            body * { visibility: hidden; }
+            #printableInvoice, #printableInvoice * { visibility: visible; }
+            #printableInvoice { position: absolute; left: 0; top: 0; width: 100%; padding: 10px; background: #fff; color: #000; }
+        }
     </style>
 </head>
 <body>
 
-    <h1>مول الصعيدي 🛒</h1>
+    <h1 style="print-color-adjust: exact;">مول الصعيدي 🛒</h1>
 
-    <!-- شريط الأزرار للانتقال بين الشاشات -->
+    <!-- شريط التنقل بين الشاشات -->
     <div class="nav-tabs">
         <button id="tabBtn-cashier" class="active" onclick="switchTab('cashier')">🛒 الكاشير</button>
         <button id="tabBtn-inventory" onclick="switchTab('inventory')">📦 المخزن</button>
@@ -131,25 +139,33 @@
             </div>
             <button class="btn-info" onclick="startCamera('inventory')">📷 فتح الكاميرا لمسح الباركود</button>
             
-            <input type="text" id="pBarcode" placeholder="باركود الصنف (يظهر تلقائياً عند المسح)">
+            <input type="hidden" id="pEditId">
+            <input type="text" id="pBarcode" placeholder="باركود الصنف">
             <input type="text" id="pName" placeholder="اسم الصنف">
             <div class="row">
                 <input type="number" id="pPrice" placeholder="السعر">
-                <input type="number" id="pQty" placeholder="العدد المراد إضافته (أو تعديله)">
+                <input type="number" id="pQty" placeholder="العدد / الكمية">
             </div>
-            <button class="btn-success" onclick="saveProduct()">حفظ الصنف أو تحديث كميته مباشرة</button>
+            <button class="btn-success" id="saveProductBtn" onclick="saveProduct()">حفظ صنف جديد</button>
+            <button class="btn-danger" id="cancelEditBtn" onclick="resetProductForm()" style="display:none;">إلغاء التعديل</button>
             
-            <h3 style="margin-top: 20px; color: #5b21b6;">قائمة الأصناف الحالية بالمخزن</h3>
+            <h3 style="margin-top: 20px; color: #5b21b6;">قائمة الأصناف الحالية بالمخزن (تعديل / حذف)</h3>
             <div id="inventoryList"></div>
         </section>
     </div>
 
-    <!-- 3. شاشة الفواتير اليومية (تعديل + حذف + واتساب) -->
+    <!-- 3. شاشة الفواتير اليومية (تعديل + حذف + واتساب + طباعة) -->
     <div id="tab-daily" class="tab-content">
         <section>
-            <h2>الفواتير اليومية</h2>
+            <h2>الفواتير اليومية وتقارير المبيعات</h2>
             <label style="display:block; margin-bottom:6px; font-weight:bold;">اختر التاريخ:</label>
             <input type="date" id="dailyDate" onchange="renderDailyInvoices()">
+            
+            <div style="margin-top: 10px; display: flex; gap: 6px;">
+                <button class="btn-whatsapp" style="flex:1; font-size:13px;" onclick="shareDailyReportWhatsApp()">📤 مشاركة التقرير واتساب</button>
+                <button class="btn-info" style="flex:1; font-size:13px;" onclick="downloadDailyReportFile()">📥 تحميل تقرير اليوم كملف</button>
+            </div>
+
             <div id="dailyInvoicesContainer" style="margin-top: 10px;"></div>
         </section>
     </div>
@@ -178,6 +194,9 @@
             </div>
         </section>
     </div>
+
+    <!-- عنصر خفي مخصص لطباعة الفاتورة -->
+    <div id="printableInvoice" style="display: none;"></div>
 
     <script>
         const REPORT_PASSWORD = "1760";
@@ -217,11 +236,15 @@
                         document.getElementById('pBarcode').value = scannedCode;
                         let existing = products.find(p => p.barcode === scannedCode);
                         if(existing) {
+                            document.getElementById('pEditId').value = existing.id;
                             document.getElementById('pName').value = existing.name;
                             document.getElementById('pPrice').value = existing.price;
-                            alert('تم التعرف على الصنف: ' + existing.name);
+                            document.getElementById('pQty').value = existing.qty;
+                            document.getElementById('saveProductBtn').innerText = 'تعديل الصنف الحالي';
+                            document.getElementById('cancelEditBtn').style.display = 'block';
+                            alert('تم العثور على الصنف، يمكنك تعديله الآن: ' + existing.name);
                         } else {
-                            alert('باركود جديد: ' + scannedCode + ' - أدخل اسمه وسعره لحفظه');
+                            alert('باركود جديد: ' + scannedCode + ' - أدخل بياناته لحفظه');
                         }
                     } else if(mode === 'cashier') {
                         let found = products.find(p => p.barcode === scannedCode);
@@ -267,32 +290,73 @@
         }
 
         function saveProduct() {
+            let editId = document.getElementById('pEditId').value;
             let barcode = document.getElementById('pBarcode').value.trim();
             let name = document.getElementById('pName').value.trim();
             let price = parseFloat(document.getElementById('pPrice').value) || 0;
             let qty = parseInt(document.getElementById('pQty').value) || 0;
 
-            if(!barcode && !name) {
-                alert('يرجى إدخال الباركود أو اسم الصنف');
+            if(!name) {
+                alert('يرجى إدخال اسم الصنف على الأقل');
                 return;
             }
 
-            let existing = products.find(p => (barcode && p.barcode === barcode) || (name && p.name.toLowerCase() === name.toLowerCase()));
-            if(existing) {
-                existing.qty += qty;
-                if(price > 0) existing.price = price;
-                if(name) existing.name = name;
-                if(barcode) existing.barcode = barcode;
-                alert('تم تحديث كمية الصنف بنجاح! الكمية الحالية: ' + existing.qty);
+            if(editId) {
+                let prod = products.find(p => p.id == editId);
+                if(prod) {
+                    prod.barcode = barcode;
+                    prod.name = name;
+                    prod.price = price;
+                    prod.qty = qty;
+                }
+                alert('تم تحديث الصنف بنجاح!');
+                resetProductForm();
             } else {
-                products.push({ id: Date.now(), barcode, name: name || 'صنف بدون اسم', price, qty });
-                alert('تم حفظ الصنف الجديد بنجاح!');
+                let existing = products.find(p => (barcode && p.barcode === barcode) || p.name.toLowerCase() === name.toLowerCase());
+                if(existing) {
+                    existing.qty += qty;
+                    if(price > 0) existing.price = price;
+                    alert('الصنف موجود مسبقاً، تم زيادة الكمية بنجاح!');
+                } else {
+                    products.push({ id: Date.now(), barcode, name, price, qty });
+                    alert('تم حفظ الصنف الجديد بنجاح!');
+                }
+                clearProductForm();
             }
 
             localStorage.setItem('products', JSON.stringify(products));
-            clearProductForm();
             updateProductSelect();
             renderInventoryList();
+        }
+
+        function editProduct(id) {
+            let p = products.find(item => item.id === id);
+            if(!p) return;
+            document.getElementById('pEditId').value = p.id;
+            document.getElementById('pBarcode').value = p.barcode || '';
+            document.getElementById('pName').value = p.name;
+            document.getElementById('pPrice').value = p.price;
+            document.getElementById('pQty').value = p.qty;
+            document.getElementById('saveProductBtn').innerText = 'تعديل الصنف الحالي';
+            document.getElementById('cancelEditBtn').style.display = 'block';
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function deleteProduct(id) {
+            if(confirm('هل أنت متأكد من حذف هذا الصنف من المخزن نهائياً؟')) {
+                products = products.filter(item => item.id !== id);
+                localStorage.setItem('products', JSON.stringify(products));
+                updateProductSelect();
+                renderInventoryList();
+                alert('تم حذف الصنف بنجاح.');
+            }
+        }
+
+        function resetProductForm() {
+            document.getElementById('pEditId').value = '';
+            clearProductForm();
+            document.getElementById('saveProductBtn').innerText = 'حفظ صنف جديد';
+            document.getElementById('cancelEditBtn').style.display = 'none';
         }
 
         function clearProductForm() {
@@ -319,9 +383,15 @@
             }
             products.forEach(p => {
                 container.innerHTML += `
-                    <div style="font-size:14px; padding:6px 0; border-bottom: 1px dashed #ddd; display:flex; justify-content:space-between; align-items:center;">
-                        <span><b>${p.name}</b> (باركود: ${p.barcode || 'بدون'})</span>
-                        <span>السعر: ${p.price}ج.م | المتاح: <b>${p.qty}</b></span>
+                    <div style="font-size:14px; padding:8px 0; border-bottom: 1px dashed #ddd; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <b>${p.name}</b> (باركود: ${p.barcode || 'بدون'})<br>
+                            <small style="color:#555;">السعر: ${p.price}ج.م | المتاح: <b>${p.qty}</b></small>
+                        </div>
+                        <div style="display:flex; gap:4px;">
+                            <button class="btn-info" style="width:auto; min-height:32px; padding:2px 8px; font-size:12px;" onclick="editProduct(${p.id})">تعديل</button>
+                            <button class="btn-danger" style="width:auto; min-height:32px; padding:2px 8px; font-size:12px;" onclick="deleteProduct(${p.id})">حذف</button>
+                        </div>
                     </div>
                 `;
             });
@@ -405,6 +475,7 @@
             let change = paid - finalTotal;
 
             let now = new Date();
+            let savedInvoice;
             
             if(editingInvoiceId) {
                 let inv = invoices.find(i => i.id === editingInvoiceId);
@@ -417,11 +488,12 @@
                     inv.finalTotal = finalTotal;
                     inv.paid = paid;
                     inv.change = change;
+                    savedInvoice = inv;
                 }
                 editingInvoiceId = null;
                 alert('تم تعديل الفاتورة بنجاح!');
             } else {
-                let newInvoice = { 
+                savedInvoice = { 
                     id: Date.now(), 
                     dateStr: now.toISOString().split('T')[0], 
                     timeStr: now.toLocaleTimeString('ar-EG'),
@@ -431,7 +503,7 @@
                     items: [...cart], 
                     subTotal, discount, finalTotal, paid, change
                 };
-                invoices.push(newInvoice);
+                invoices.push(savedInvoice);
                 
                 cart.forEach(cartItem => {
                     let prod = products.find(p => p.id === cartItem.id);
@@ -442,6 +514,11 @@
 
             localStorage.setItem('invoices', JSON.stringify(invoices));
             localStorage.setItem('products', JSON.stringify(products));
+
+            // طباعة تلقائية بعد الحفظ (اختياري أو حسب الرغبة)
+            if(confirm('هل تريد طباعة الفاتورة الآن؟')) {
+                printInvoiceObject(savedInvoice);
+            }
 
             cart = [];
             document.getElementById('clientName').value = '';
@@ -468,7 +545,6 @@
             alert('تم جلب الفاتورة للتعديل في شاشة الكاشير. عدل ما تحتاجه ثم اضغط إتمام وحفظ الفاتورة.');
         }
 
-        // حذف الفاتورة مع إرجاع كمياتها للمخزن إن أمكن
         function deleteInvoice(id) {
             if(confirm('هل أنت متأكد من حذف هذه الفاتورة نهائياً؟')) {
                 invoices = invoices.filter(inv => inv.id !== id);
@@ -476,6 +552,44 @@
                 renderDailyInvoices();
                 alert('تم حذف الفاتورة بنجاح.');
             }
+        }
+
+        // دالة طباعة الفاتورة المنفصلة
+        function printInvoice(id) {
+            let inv = invoices.find(i => i.id === id);
+            if(inv) printInvoiceObject(inv);
+        }
+
+        function printInvoiceObject(inv) {
+            let itemsHtml = inv.items.map(i => `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>${i.name} (×${i.qty})</span>
+                    <span>${i.price * i.qty} ج.م</span>
+                </div>
+            `).join('');
+
+            let printContainer = document.getElementById('printableInvoice');
+            printContainer.innerHTML = `
+                <div style="text-align: center; font-family: sans-serif; font-size: 14px; direction: rtl;">
+                    <h2 style="margin: 0 0 5px 0;">مول الصعيدي 🛒</h2>
+                    <p style="margin: 0 0 5px 0; font-size: 12px;">تاريخ: ${inv.dateStr} | ${inv.timeStr}</p>
+                    <p style="margin: 0 0 10px 0; font-size: 12px;">العميل: ${inv.clientName} (${inv.clientPhone})</p>
+                    <hr style="border: dashed 1px #000; margin: 5px 0;">
+                    <div style="text-align: right;">${itemsHtml}</div>
+                    <hr style="border: dashed 1px #000; margin: 5px 0;">
+                    <div style="text-align: right; font-size: 13px;">
+                        إجمالي الأصناف: ${inv.subTotal} ج.م<br>
+                        الخصم: ${inv.discount} ج.م<br>
+                        <b>الإجمالي النهائي: ${inv.finalTotal} ج.م</b><br>
+                        المدفوع: ${inv.paid} ج.م<br>
+                        المتبقي (الباقي): ${inv.change} ج.م
+                    </div>
+                    <p style="margin-top: 15px; font-size: 12px;">شكراً لتعاملكم معنا ❤️</p>
+                </div>
+            `;
+            printContainer.style.display = 'block';
+            window.print();
+            printContainer.style.display = 'none';
         }
 
         function shareInvoiceWhatsApp(id) {
@@ -489,14 +603,49 @@
             window.open(url, '_blank');
         }
 
-        function shareDailyReportWhatsApp() {
+        function getDailyReportText() {
             let selectedDate = document.getElementById('dailyDate').value;
             let filtered = invoices.filter(inv => inv.dateStr === selectedDate);
             let totalSales = filtered.reduce((sum, inv) => sum + inv.finalTotal, 0);
 
-            let text = `📊 *تقرير مبيعات مول الصعيدي* \n📅 التاريخ: ${selectedDate}\n💰 إجمالي المبيعات: ${totalSales} ج.م\n🧾 عدد الفواتير: ${filtered.length}\n\nتم استخراج التقرير من النظام بنجاح.`;
+            let report = `📊 تقرير مبيعات مول الصعيدي - يوم: ${selectedDate}\n`;
+            report += `----------------------------------------\n`;
+            report += `إجمالي مبيعات اليوم: ${totalSales} ج.م\n`;
+            report += `عدد الفواتير: ${filtered.length}\n`;
+            report += `----------------------------------------\n\n`;
+
+            filtered.forEach((inv, index) => {
+                report += `🧾 فاتورة #${index + 1} [${inv.timeStr}]\n`;
+                report += `👤 العميل: ${inv.clientName} (${inv.clientPhone})\n`;
+                report += `الأصناف المباعة:\n`;
+                inv.items.forEach(i => {
+                    report += `  • ${i.name} (العدد: ${i.qty}) - السعر: ${i.price * i.qty}ج\n`;
+                });
+                report += `الخصم: ${inv.discount}ج | النهائي: ${inv.finalTotal}ج | المدفوع: ${inv.paid}ج | المتبقي: ${inv.change}ج\n`;
+                report += `----------------------------------------\n`;
+            });
+
+            return report;
+        }
+
+        function shareDailyReportWhatsApp() {
+            let text = getDailyReportText();
             let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
             window.open(url, '_blank');
+        }
+
+        function downloadDailyReportFile() {
+            let selectedDate = document.getElementById('dailyDate').value;
+            let text = getDailyReportText();
+            let blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = `تقرير_مبيعات_${selectedDate}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function renderDailyInvoices() {
@@ -508,9 +657,8 @@
             let totalDaySales = filtered.reduce((sum, inv) => sum + inv.finalTotal, 0);
 
             let headerHtml = `
-                <div style="background:#ede9fe; padding:10px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="background:#ede9fe; padding:10px; border-radius:10px; margin-bottom:10px;">
                     <span>إجمالي مبيعات اليوم: <b>${totalDaySales} ج.م</b> (${filtered.length} فاتورة)</span>
-                    <button class="btn-whatsapp" style="width:auto; min-height:36px; padding:4px 10px; font-size:13px;" onclick="shareDailyReportWhatsApp()">📤 مشاركة التقرير واتساب</button>
                 </div>
             `;
 
@@ -533,9 +681,10 @@
                             الخصم: ${inv.discount || 0} ج.م | المدفوع: ${inv.paid || 0} ج.م | المتبقي (الباقي/السالب): <b style="color:${inv.change < 0 ? '#ef4444':'#10b981'}">${inv.change} ج.م</b>
                         </div>
                         <div class="row" style="margin-top: 8px; display: flex; gap: 4px;">
-                            <button class="btn-info" style="flex: 1; font-size: 13px;" onclick="editInvoice(${inv.id})">تعديل</button>
-                            <button class="btn-whatsapp" style="flex: 1; font-size: 13px;" onclick="shareInvoiceWhatsApp(${inv.id})">واتساب</button>
-                            <button class="btn-danger" style="flex: 1; font-size: 13px;" onclick="deleteInvoice(${inv.id})">حذف</button>
+                            <button class="btn-print" style="flex: 1; font-size: 12px; min-height: 38px;" onclick="printInvoice(${inv.id})">🖨️ طباعة</button>
+                            <button class="btn-info" style="flex: 1; font-size: 12px; min-height: 38px;" onclick="editInvoice(${inv.id})">تعديل</button>
+                            <button class="btn-whatsapp" style="flex: 1; font-size: 12px; min-height: 38px;" onclick="shareInvoiceWhatsApp(${inv.id})">واتساب</button>
+                            <button class="btn-danger" style="flex: 1; font-size: 12px; min-height: 38px;" onclick="deleteInvoice(${inv.id})">حذف</button>
                         </div>
                     </div>
                 `;
