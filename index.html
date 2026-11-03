@@ -153,7 +153,7 @@
     @media print {
       body { background: white; }
       header, .tabs, .no-print, main > section:not(#receipt) { display: none !important; }
-      #receipt { display: block !important; border: 0; width: 100%; }
+      #receipt { display: block !important; border: 0; width: 100%; padding: 0; box-shadow: none; }
     }
   </style>
 </head>
@@ -165,11 +165,11 @@
   </header>
 
   <main>
-    <div id="systemStatus" style="padding: 6px 10px; margin-bottom: 10px; background: #e6ece8; border-radius: 6px; font-size: 12px; display:flex; justify-content:space-between; align-items:center;">
+    <div id="systemStatus" style="padding: 6px 10px; margin-bottom: 10px; background: #e6ece8; border-radius: 6px; font-size: 12px; display:flex; justify-content:space-between; align-items:center;" class="no-print">
       <span>🟢 النظام المحلي يعمل بكفاءة تامة</span>
       <div>
-        <button class="small-button" onclick="exportBackup()">📥 تصدير نسخة احتياطية</button>
-        <button class="small-button" onclick="$('importFile').click()">📤 استعادة نسخة</button>
+        <button class="small-button" onclick="exportBackup()">📥 تصدير نسخة</button>
+        <button class="small-button" onclick="$('importFile').click()">📤 استعادة</button>
         <input type="file" id="importFile" class="hidden" accept=".json" onchange="importBackup(event)">
       </div>
     </div>
@@ -188,10 +188,10 @@
         <h2>عملية بيع جديدة</h2>
         <div class="form-grid">
           <div class="field full">
-            <label for="productSearch">ابحث بالاسم أو امسح الباركود</label>
+            <label for="productSearch">ابحث بالاسم أو امسح الباركود الخطي</label>
             <div style="display:flex; gap:6px;">
               <input id="productSearch" autocomplete="off" placeholder="اسم المنتج أو الباركود">
-              <button type="button" class="secondary" id="btnScanSale">📸 كاميرا</button>
+              <button type="button" class="secondary" id="btnScanSale">📸 كاميرا الباركود</button>
             </div>
           </div>
           <div id="scannerContainerSale" class="full hidden">
@@ -254,7 +254,7 @@
             <input id="productStock" required type="number" min="0" step="1">
           </div>
           <div class="field">
-            <label for="productBarcode">الباركود</label>
+            <label for="productBarcode">الباركود الخطي</label>
             <div style="display:flex; gap:4px;">
               <input id="productBarcode" placeholder="مسح أو إدخال الباركود">
               <button type="button" class="secondary" id="btnScanProduct">📸 كاميرا</button>
@@ -333,7 +333,7 @@
             <h3 id="repTotalExpenses" style="color:var(--red);">٠ ج.م</h3>
           </div>
           <div class="card">
-            <div class="muted">صافي الدرج (سالب / ربح اليوم)</div>
+            <div class="muted">صافي الدرج (الربح)</div>
             <h3 id="repNetProfit">٠ ج.م</h3>
           </div>
           <div class="card">
@@ -346,7 +346,7 @@
       </div>
     </section>
 
-    <!-- الفاتورة والطباعة -->
+    <!-- الفاتورة والطباعة المخصصة -->
     <section id="receipt" class="panel hidden"></section>
   </main>
 
@@ -410,28 +410,55 @@
       reader.readAsText(file);
     }
 
-    // --- تشغيل الكاميرا ---
+    // --- إعدادات الماسح الضوئي للباركود الخطي (الخطوط فقط دون QR المربع) ---
+    const barcodeFormatsToSupport = [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E
+    ];
+
     let scannerSale = null, scannerProduct = null;
+    
     $("btnScanSale").addEventListener("click", () => {
       $("scannerContainerSale").classList.remove("hidden");
       scannerSale = new Html5Qrcode("readerSale");
-      scannerSale.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
-        $("productSearch").value = text;
-        renderSearch();
-        scannerSale.stop();
-        $("scannerContainerSale").classList.add("hidden");
-      }).catch(e => alert("تعذر فتح الكاميرا"));
+      scannerSale.start(
+        { facingMode: "environment" }, 
+        { fps: 15, qrbox: { width: 250, height: 100 }, formatsToSupport: barcodeFormatsToSupport }, 
+        (text) => {
+          $("productSearch").value = text;
+          renderSearch();
+          // فحص تلقائي للبحث السريع لو الباركود مطابق
+          const exact = products.find(p => p.barcode === text);
+          if(exact && exact.stock > 0) {
+            addToCart(exact.id);
+            $("productSearch").value = "";
+            renderSearch();
+          }
+          scannerSale.stop();
+          $("scannerContainerSale").classList.add("hidden");
+        },
+        (error) => {}
+      ).catch(e => alert("تعذر فتح الكاميرا: " + e));
     });
     $("btnCloseScannerSale").addEventListener("click", () => { if(scannerSale) scannerSale.stop(); $("scannerContainerSale").classList.add("hidden"); });
 
     $("btnScanProduct").addEventListener("click", () => {
       $("scannerContainerProduct").classList.remove("hidden");
       scannerProduct = new Html5Qrcode("readerProduct");
-      scannerProduct.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
-        $("productBarcode").value = text;
-        scannerProduct.stop();
-        $("scannerContainerProduct").classList.add("hidden");
-      }).catch(e => alert("تعذر فتح الكاميرا"));
+      scannerProduct.start(
+        { facingMode: "environment" }, 
+        { fps: 15, qrbox: { width: 250, height: 100 }, formatsToSupport: barcodeFormatsToSupport }, 
+        (text) => {
+          $("productBarcode").value = text;
+          scannerProduct.stop();
+          $("scannerContainerProduct").classList.add("hidden");
+        },
+        (error) => {}
+      ).catch(e => alert("تعذر فتح الكاميرا: " + e));
     });
     $("btnCloseScannerProduct").addEventListener("click", () => { if(scannerProduct) scannerProduct.stop(); $("scannerContainerProduct").classList.add("hidden"); });
 
@@ -636,33 +663,58 @@
     };
 
     function showReceipt(inv) {
-      const lines = inv.items.map(i => `<div class="summary-line"><span>${escapeHtml(i.name)} × ${i.quantity}</span><span>${money(i.price * i.quantity)}</span></div>`).join("");
+      const lines = inv.items.map(i => `
+        <div class="summary-line">
+          <span>${escapeHtml(i.name)} (×${i.quantity})</span>
+          <span>${money(i.price * i.quantity)}</span>
+        </div>
+      `).join("");
+
       $("receipt").innerHTML = `
-        <div id="receiptContent" style="background:#fff; padding:15px;">
-          <h2 style="text-align:center;margin:0;">🛒 مول الصعيدي</h2>
-          <div style="text-align:center;font-size:13px;" class="muted">فاتورة مبيعات</div>
-          <hr>
-          <p><strong>رقم الفاتورة:</strong> ${escapeHtml(inv.id)}</p>
-          <p><strong>التاريخ:</strong> ${new Date(inv.date).toLocaleString("ar-EG")}</p>
-          <p><strong>العميل:</strong> ${escapeHtml(inv.customerName)} (${escapeHtml(inv.customerPhone)})</p>
-          <hr>${lines}<hr>
-          <div class="summary-line"><span>الإجمالي:</span><strong>${money(inv.total)}</strong></div>
+        <div id="receiptContent" style="background:#fff; padding:20px; border-radius:10px; max-width:400px; margin:0 auto;">
+          <h2 style="text-align:center; margin:0 0 5px 0;">🛒 مول الصعيدي</h2>
+          <div style="text-align:center; font-size:12px;" class="muted">إيصال مبيعات</div>
+          <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+          <p style="margin:4px 0; font-size:13px;"><strong>رقم الفاتورة:</strong> ${escapeHtml(inv.id)}</p>
+          <p style="margin:4px 0; font-size:13px;"><strong>التاريخ:</strong> ${new Date(inv.date).toLocaleString("ar-EG")}</p>
+          <p style="margin:4px 0; font-size:13px;"><strong>العميل:</strong> ${escapeHtml(inv.customerName)}</p>
+          <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+          <div style="font-weight:600; margin-bottom:5px; font-size:13px;">الأصناف:</div>
+          ${lines}
+          <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+          <div class="summary-line"><span>الإجمالي:</span><strong>${money(inv.subtotal)}</strong></div>
+          ${inv.discount > 0 ? `<div class="summary-line"><span>الخصم:</span><strong>${money(inv.discount)}</strong></div>` : ''}
+          <div class="summary-line" style="font-size:15px;"><span>الصافي المطلوب:</span><strong>${money(inv.total)}</strong></div>
           <div class="summary-line"><span>المدفوع:</span><strong>${money(inv.paid)}</strong></div>
           <div class="summary-line"><span>المتبقي:</span><strong>${money(inv.remaining)}</strong></div>
+          <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+          <div style="text-align:center; font-size:11px; color:#555; line-height:1.4;">
+            سياسة الاستبدال خلال 7 أيام والاسترجاع خلال 3 أيام برمز الفاتورة.<br>
+            شكراً لتعاملكم معنا في مول الصعيدي 🙏
+          </div>
         </div>
-        <div class="actions no-print" style="margin-top:12px;">
-          <button class="primary" onclick="window.print()">🖨️ طباعة</button>
-          <button class="secondary" onclick="shareInvoiceText('${inv.id}')">📱 مشاركة واتساب</button>
+        <div class="actions no-print" style="margin-top:12px; display:flex; justify-content:center; gap:8px;">
+          <button class="primary" onclick="window.print()">🖨️ طباعة الإيصال</button>
+          <button class="secondary" onclick="shareReceiptImage()">📱 مشاركة الفاتورة صورة واتساب</button>
         </div>
       `;
       $("receipt").classList.remove("hidden");
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
-    window.shareInvoiceText = function(id) {
-      const inv = invoices.find(i => i.id === id);
-      let itemsText = inv.items.map(i => `▪️ ${i.name} (${i.quantity}) - ${i.price * i.quantity}ج`).join("\n");
-      let msg = `🛒 *مول الصعيدي* - فاتورة مبيعات\nرقم: ${inv.id}\nالعميل: ${inv.customerName}\n\nالأصناف:\n${itemsText}\n\nالإجمالي: ${money(inv.total)}`;
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    window.shareReceiptImage = function() {
+      html2canvas($("receiptContent"), { scale: 2 }).then(canvas => {
+        canvas.toBlob(blob => {
+          let file = new File([blob], "invoice.png", { type: "image/png" });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: 'فاتورة مول الصعيدي' });
+          } else {
+            let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Invoice_Saidi_Mall.png'; a.click();
+            alert("تم حفظ صورة الفاتورة على جهازك، يمكنك إرسالها الآن عبر واتساب.");
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("إليك فاتورة مبيعات مول الصعيدي:")}`, '_blank');
+          }
+        });
+      });
     };
 
     // --- المصاريف اليومية ---
@@ -699,7 +751,7 @@
       renderExpenses();
     };
 
-    // --- التقارير وتقرير الواتسب اليومي ---
+    // --- التقارير وتقرير الواتساب ---
     function renderReports() {
       const totalSales = invoices.reduce((s, i) => s + i.total, 0);
       const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
@@ -735,16 +787,27 @@
                    `📉 *صافي الدرج (الربح):* ${money(netProfit)}\n` +
                    `📄 *عدد الفواتير:* ${invoices.length}\n` +
                    `-----------------------------------\n` +
-                   `📋 *تفاصيل الفواتير اليومية:*\n`;
+                   `📋 *تفاصيل الفواتير اليومية:*\n\n`;
 
-      invoices.forEach((inv, idx) => {
-        let itemsStr = inv.items.map(i => `${i.name}(${i.quantity})`).join(", ");
-        report += `${idx + 1}. [${inv.id}] ${inv.customerName} - ${money(inv.total)} (${itemsStr})\n`;
-      });
+      if(invoices.length === 0) {
+        report += `لا توجد فواتير مسجلة اليوم.\n`;
+      } else {
+        invoices.forEach((inv, idx) => {
+          report += `*${idx + 1}. [${inv.id}] - ${inv.customerName}*\n`;
+          inv.items.forEach(item => {
+            report += `   ▪️ ${item.name} (عدد: ${item.quantity}) — ${money(item.price * item.quantity)}\n`;
+          });
+          report += `   💵 *إجمالي الفاتورة:* ${money(inv.total)}\n`;
+          if(idx < invoices.length - 1) report += `   ---------------------------\n`;
+        });
+      }
 
-      let expStr = expenses.map(e => `• ${e.title}: ${money(e.amount)}`).join("\n");
       if(expenses.length > 0) {
-        report += `\n💸 *المصاريف:* \n${expStr}\n`;
+        report += `\n-----------------------------------\n` +
+                  `💸 *المصاريف اليومية:*\n`;
+        expenses.forEach((e, i) => {
+          report += `${i + 1}. ${e.title}: ${money(e.amount)}\n`;
+        });
       }
 
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(report)}`, '_blank');
