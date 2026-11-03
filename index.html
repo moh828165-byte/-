@@ -1,714 +1,122 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#7c3aed">
-    <title>مول الصعيدي - النظام الشامل</title>
-    <!-- مكتبة قراءة الباركود عبر الكاميرا -->
-    <script src="https://unpkg.com/@zxing/library@latest"></script>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0; font-family: system-ui, sans-serif; background: #f5f3ff;
-            color: #211b2d; padding: 16px; max-width: 720px; margin-inline: auto;
-        }
-        h1 { margin: 4px 0 16px; font-size: 24px; color: #6d28d9; text-align: center; }
-        
-        /* شريط التنقل بين الشاشات */
-        .nav-tabs {
-            display: flex; gap: 4px; background: #ede9fe; padding: 6px;
-            border-radius: 14px; margin-bottom: 16px; overflow-x: auto;
-        }
-        .nav-tabs button {
-            flex: 1; min-height: 40px; padding: 8px 10px; font-size: 13px;
-            background: transparent; color: #5b21b6; border: none; border-radius: 10px;
-            font-weight: bold; cursor: pointer; white-space: nowrap;
-        }
-        .nav-tabs button.active {
-            background: #7c3aed; color: white; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
-        }
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#7c3aed">
+<title>مول الصعيدي - نظام الكاشير</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:14px;max-width:760px;margin-inline:auto;background:#f5f3ff;color:#211b2d;font-family:system-ui,sans-serif}h1{text-align:center;color:#6d28d9;font-size:23px;margin:5px 0 15px}h2{font-size:18px;color:#5b21b6;margin:0 0 12px}h3{font-size:16px;color:#5b21b6}section{background:#fff;padding:14px;border-radius:15px;box-shadow:0 3px 14px #0000000d;margin-bottom:14px}.tabs{display:flex;gap:4px;overflow:auto;background:#ede9fe;padding:5px;border-radius:13px;margin-bottom:14px}.tabs button{flex:1;white-space:nowrap;font-size:13px;padding:8px 10px;background:transparent;color:#5b21b6;min-width:80px}.tabs button.active{background:#7c3aed;color:#fff}.content{display:none}.content.active{display:block}input,select,button{width:100%;min-height:44px;margin:5px 0;padding:10px 12px;border:1px solid #ddd6e8;border-radius:10px;font-size:15px;background:#fff}button{border:0;background:#7c3aed;color:white;font-weight:700;cursor:pointer}.danger{background:#ef4444}.success{background:#10b981}.info{background:#3b82f6}.warning{background:#f59e0b}.green{background:#25d366}.row{display:flex;gap:7px}.row>*{min-width:0;flex:1}.card{border:1px solid #e9d5ff;background:#faf5ff;border-radius:11px;padding:10px;margin:8px 0}.line{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed #e9d5ff;align-items:center}.small{font-size:12px;color:#655b70}.summary{background:#faf5ff;border:1px solid #e9d5ff;border-radius:11px;padding:10px;line-height:1.8}.video{display:none;background:#111;border-radius:12px;overflow:hidden;margin:8px 0}.video video{width:100%;max-height:240px;object-fit:cover}.status{padding:9px;border-radius:9px;background:#f3e8ff;margin:8px 0;font-size:13px}#printArea{display:none}@media print{body *{visibility:hidden}#printArea,#printArea *{visibility:visible}#printArea{display:block;position:absolute;top:0;right:0;width:100%;padding:12px;background:#fff;color:#000}}
+</style></head><body>
+<h1>مول الصعيدي 🛒</h1><div id="connectionStatus" class="status">جاري الاتصال بقاعدة البيانات...</div>
+<div class="tabs"><button class="active" id="btn-cashier" onclick="switchTab('cashier')">🛒 الكاشير</button><button id="btn-inventory" onclick="switchTab('inventory')">📦 المخزن</button><button id="btn-daily" onclick="switchTab('daily')">📅 الفواتير</button><button id="btn-reports" onclick="switchTab('reports')">📊 التقارير</button></div>
+<div id="tab-cashier" class="content active"><section><h2>البيع والفاتورة</h2><div class="row"><input id="clientName" placeholder="اسم العميل"><input id="clientPhone" inputmode="tel" placeholder="رقم الهاتف"></div><div id="camera-cashier" class="video"><video id="video-cashier" muted autoplay playsinline></video></div><button class="info" onclick="startCamera('cashier')">📷 مسح باركود للبيع</button><input id="searchBarcode" placeholder="ابحث بالباركود أو اسم الصنف" oninput="updateProductSelect()"><select id="productSelect" onchange="addSelectedProduct()"><option value="">اختر صنفًا</option></select><div id="cartList"></div><div class="row"><div><label>الخصم (ج.م)</label><input id="discountVal" type="number" min="0" value="0" oninput="renderCart()"></div><div><label>المدفوع (ج.م)</label><input id="paidVal" type="number" min="0" value="0" oninput="renderCart()"></div></div><div id="invoiceSummary" class="summary"></div><button onclick="checkoutInvoice()">حفظ وإتمام البيع</button><button class="danger" onclick="clearCart()">تفريغ الفاتورة</button></section></div>
+<div id="tab-inventory" class="content"><section><h2>إدارة المخزن</h2><div id="camera-inventory" class="video"><video id="video-inventory" muted autoplay playsinline></video></div><button class="info" onclick="startCamera('inventory')">📷 مسح باركود الصنف</button><input type="hidden" id="pDocId"><input id="pBarcode" placeholder="الباركود"><input id="pName" placeholder="اسم الصنف"><div class="row"><input id="pPrice" type="number" min="0" placeholder="السعر"><input id="pQty" type="number" min="0" step="1" placeholder="الكمية"></div><button class="success" id="saveProductBtn" onclick="saveProduct()">حفظ الصنف</button><button class="danger" id="cancelEditBtn" style="display:none" onclick="resetProductForm()">إلغاء التعديل</button><input id="inventorySearch" placeholder="بحث في المخزن" oninput="renderInventoryList()"><div id="inventoryList"></div></section></div>
+<div id="tab-daily" class="content"><section><h2>الفواتير اليومية</h2><label>التاريخ</label><input type="date" id="dailyDate" onchange="renderDailyInvoices()"><div class="row"><button class="green" onclick="shareDailyReportWhatsApp()">مشاركة واتساب</button><button class="info" onclick="downloadDailyReportFile()">تحميل CSV</button></div><div id="dailyInvoicesContainer"></div></section></div>
+<div id="tab-reports" class="content"><section><h2>كشف الحساب</h2><div id="passSection"><input type="password" id="reportPass" placeholder="كلمة مرور التقارير"><button class="warning" onclick="unlockReports()">فتح التقارير</button><div class="small">تنبيه: كلمة المرور داخل الصفحة ليست حماية حقيقية للبيانات.</div></div><div id="reportsContent" style="display:none"><button class="danger" onclick="lockReports()">قفل التقارير</button><label>التاريخ</label><input type="date" id="reportDate" onchange="generateReport()"><div id="reportResult" class="summary"></div><button class="info" onclick="exportBackup()">تنزيل نسخة JSON من البيانات المحملة</button></div></section></div>
+<div id="printArea"></div>
+<script>
+const firebaseConfig={apiKey:"AIzaSyB9EWlVr5e72lZqF_a0pne0U",authDomain:"alsaeedy-mall.firebaseapp.com",projectId:"alsaeedy-mall",storageBucket:"alsaeedy-mall.firebasestorage.app",messagingSenderId:"542292216756",appId:"1:542292216756:web:7dbfa21e46b7"};
+const REPORT_PASSWORD="1760";let db,products=[],invoices=[],cart=[],reader=null,busy=false;
+const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('ar-EG',{maximumFractionDigits:2})+' ج.م';const today=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+function setStatus(msg,ok=false){$('connectionStatus').textContent=msg;$('connectionStatus').style.background=ok?'#dcfce7':'#fee2e2'}
+try{if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(()=>{});loadDataFromCloud()}catch(e){setStatus('تعذر تهيئة Firebase: '+e.message)}
+async function loadDataFromCloud(){if(!db)return;try{const [ps,is]=await Promise.all([db.collection('products').get(),db.collection('invoices').get()]);products=ps.docs.map(d=>({docId:d.id,...d.data()}));invoices=is.docs.map(d=>({docId:d.id,...d.data()}));updateProductSelect();renderCart();renderInventoryList();renderDailyInvoices();generateReport();setStatus(`تم الاتصال بالسحابة. الأصناف: ${products.length} — الفواتير: ${invoices.length}`,true)}catch(e){setStatus('فشل تحميل البيانات: '+e.message+' — راجع الإنترنت وقواعد Firestore');console.error(e)}}
+function switchTab(id){stopCamera();document.querySelectorAll('.content').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));$('tab-'+id).classList.add('active');$('btn-'+id).classList.add('active');if(id==='inventory')renderInventoryList();if(id==='daily'){if(!$('dailyDate').value)$('dailyDate').value=today();renderDailyInvoices()}if(id==='reports'&&$('reportsContent').style.display==='block')generateReport()}
+function updateProductSelect(){let q=$('searchBarcode').value.trim().toLowerCase();let list=products.filter(p=>!q||String(p.barcode||'').toLowerCase().includes(q)||String(p.name||'').toLowerCase().includes(q));$('productSelect').innerHTML='<option value="">اختر صنفًا</option>'+list.map(p=>`<option value="${esc(p.docId)}">${esc(p.name||'بدون اسم')} — ${money(p.price)} — المتاح ${Number(p.qty)||0}</option>`).join('')}
+function addSelectedProduct(){let p=products.find(x=>x.docId===$('productSelect').value);if(!p)return;addProduct(p);$('productSelect').value='';$('searchBarcode').value='';updateProductSelect()}
+function addProduct(p){let item=cart.find(x=>x.docId===p.docId);let already=item?item.qty:0;if(already+1>(Number(p.qty)||0)){alert('الكمية المتاحة لا تكفي. المتاح: '+(Number(p.qty)||0));return}if(item)item.qty++;else cart.push({...p,qty:1});renderCart()}
+function renderCart(){let html='';cart.forEach((p,i)=>{html+=`<div class="card"><div class="line"><b>${esc(p.name)}</b><span>${money(p.price)} × ${p.qty}</span></div><div class="row"><button onclick="changeQty(${i},-1)">−</button><button onclick="changeQty(${i},1)">+</button><button class="danger" onclick="removeCartItem(${i})">حذف</button></div></div>`});$('cartList').innerHTML=html||'<div class="small">الفاتورة فارغة</div>';let subtotal=cart.reduce((s,p)=>s+(Number(p.price)||0)*p.qty,0),discount=Math.max(0,Number($('discountVal').value)||0),total=Math.max(0,subtotal-discount),paid=Math.max(0,Number($('paidVal').value)||0);$('invoiceSummary').innerHTML=`إجمالي الأصناف: ${money(subtotal)}<br>الخصم: ${money(discount)}<br><b>الإجمالي النهائي: ${money(total)}</b><br>المدفوع: ${money(paid)}<br><b>المتبقي: ${money(Math.max(0,total-paid))} — الباقي للعميل: ${money(Math.max(0,paid-total))}</b>`}
+function changeQty(i,delta){let p=cart[i],prod=products.find(x=>x.docId===p.docId);let next=p.qty+delta;if(next<1){cart.splice(i,1)}else if(delta>0&&next>(Number(prod?.qty)||0)){alert('الكمية المتاحة لا تكفي');return}else p.qty=next;renderCart()}function removeCartItem(i){cart.splice(i,1);renderCart()}function clearCart(){if(confirm('تفريغ الفاتورة الحالية؟')){cart=[];$('discountVal').value=0;$('paidVal').value=0;$('clientName').value='';$('clientPhone').value='';renderCart()}}
+async function checkoutInvoice(){if(busy)return;if(!db){alert('قاعدة البيانات غير متاحة');return}if(!cart.length){alert('أضف أصنافًا أولًا');return}let subtotal=cart.reduce((s,p)=>s+(Number(p.price)||0)*p.qty,0),discount=Math.max(0,Number($('discountVal').value)||0);if(discount>subtotal){alert('الخصم لا يمكن أن يتجاوز إجمالي الأصناف');return}let total=subtotal-discount,paid=Math.max(0,Number($('paidVal').value)||0);const invoiceRef=db.collection('invoices').doc();const items=cart.map(p=>({productDocId:p.docId,id:p.id||null,barcode:p.barcode||'',name:p.name,price:Number(p.price)||0,qty:p.qty,lineTotal:(Number(p.price)||0)*p.qty}));let invoice={invoiceNo:invoiceRef.id.slice(-8).toUpperCase(),clientName:$('clientName').value.trim(),clientPhone:$('clientPhone').value.trim(),items,subtotal,discount,total,paid,remaining:Math.max(0,total-paid),change:Math.max(0,paid-total),createdAt:firebase.firestore.FieldValue.serverTimestamp(),date:today(),branch:'مول الصعيدي'};busy=true;setStatus('جاري حفظ الفاتورة وتحديث المخزون...');try{await db.runTransaction(async tx=>{let refs=cart.map(p=>db.collection('products').doc(p.docId));let snaps=[];for(const ref of refs)snaps.push(await tx.get(ref));snaps.forEach((snap,i)=>{if(!snap.exists)throw new Error('صنف لم يعد موجودًا بالمخزن');let qty=Number(snap.data().qty)||0;if(qty<cart[i].qty)throw new Error('الكمية غير كافية للصنف: '+(snap.data().name||''))});snaps.forEach((snap,i)=>tx.update(refs[i],{qty:(Number(snap.data().qty)||0)-cart[i].qty}));tx.set(invoiceRef,invoice)});alert('تم حفظ الفاتورة وتحديث المخزون بنجاح');printInvoice({...invoice,docId:invoiceRef.id,createdAt:new Date()});cart=[];$('discountVal').value=0;$('paidVal').value=0;$('clientName').value='';$('clientPhone').value='';await loadDataFromCloud()}catch(e){alert('لم يتم تأكيد حفظ الفاتورة: '+e.message);setStatus('فشل حفظ الفاتورة: '+e.message);console.error(e)}finally{busy=false}}
+async function saveProduct(){if(!db)return alert('قاعدة البيانات غير متاحة');let docId=$('pDocId').value,barcode=$('pBarcode').value.trim(),name=$('pName').value.trim(),price=Number($('pPrice').value),qty=Number($('pQty').value);if(!name)return alert('اكتب اسم الصنف');if(!Number.isFinite(price)||price<0||!Number.isInteger(qty)||qty<0)return alert('تأكد من السعر والكمية');try{let dup=products.find(p=>(barcode&&p.barcode===barcode||p.name?.trim().toLowerCase()===name.toLowerCase())&&p.docId!==docId);if(dup&&!docId){if(!confirm('الصنف موجود بالفعل. هل تريد إضافة الكمية وتحديث السعر؟'))return;await db.collection('products').doc(dup.docId).update({qty:(Number(dup.qty)||0)+qty,price,barcode:barcode||dup.barcode||''})}else if(docId){await db.collection('products').doc(docId).update({barcode,name,price,qty})}else{await db.collection('products').add({id:Date.now(),barcode,name,price,qty,createdAt:firebase.firestore.FieldValue.serverTimestamp()})}alert('تم الحفظ في السحابة');resetProductForm();await loadDataFromCloud()}catch(e){alert('فشل حفظ الصنف: '+e.message);setStatus('فشل حفظ الصنف: '+e.message)}}
+function editProduct(id){let p=products.find(x=>x.docId===id);if(!p)return;$('pDocId').value=p.docId;$('pBarcode').value=p.barcode||'';$('pName').value=p.name||'';$('pPrice').value=p.price??0;$('pQty').value=p.qty??0;$('saveProductBtn').textContent='حفظ التعديل';$('cancelEditBtn').style.display='block';window.scrollTo({top:0,behavior:'smooth'})}function resetProductForm(){['pDocId','pBarcode','pName','pPrice','pQty'].forEach(id=>$(id).value='');$('saveProductBtn').textContent='حفظ الصنف';$('cancelEditBtn').style.display='none'}
+async function deleteProduct(id){if(!confirm('حذف الصنف من المخزن؟ لا يمكن التراجع عن الحذف.'))return;try{await db.collection('products').doc(id).delete();await loadDataFromCloud()}catch(e){alert('تعذر حذف الصنف: '+e.message)}}
+function renderInventoryList(){let q=($('inventorySearch')?.value||'').trim().toLowerCase();let list=products.filter(p=>!q||String(p.name||'').toLowerCase().includes(q)||String(p.barcode||'').toLowerCase().includes(q));$('inventoryList').innerHTML=list.map(p=>`<div class="card"><div class="line"><b>${esc(p.name||'بدون اسم')}</b><span>${money(p.price)}</span></div><div class="small">باركود: ${esc(p.barcode||'—')} | الكمية: ${Number(p.qty)||0}</div><div class="row"><button onclick="editProduct('${esc(p.docId)}')">تعديل</button><button class="danger" onclick="deleteProduct('${esc(p.docId)}')">حذف</button></div></div>`).join('')||'<div class="small">لا توجد أصناف مطابقة</div>'}
+function invoiceDate(inv){if(inv.date)return String(inv.date).slice(0,10);let d=inv.createdAt?.toDate?inv.createdAt.toDate():inv.createdAt?.seconds?new Date(inv.createdAt.seconds*1000):null;return d?todayFrom(d):''}function todayFrom(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function renderDailyInvoices(){if(!$('dailyDate').value)$('dailyDate').value=today();let date=$('dailyDate').value,list=invoices.filter(i=>invoiceDate(i)===date).sort((a,b)=>String(b.invoiceNo||'').localeCompare(String(a.invoiceNo||'')));$('dailyInvoicesContainer').innerHTML=list.map(i=>invoiceCard(i)).join('')||'<div class="small">لا توجد فواتير في هذا التاريخ</div>'}
+function invoiceCard(i){let d=i.createdAt?.toDate?i.createdAt.toDate():i.createdAt?.seconds?new Date(i.createdAt.seconds*1000):null;return `<div class="card"><div class="line"><b>فاتورة ${esc(i.invoiceNo||i.docId||'')}</b><b>${money(i.total)}</b></div><div class="small">${esc(i.clientName||'عميل نقدي')} — ${esc(i.clientPhone||'بدون هاتف')} ${d?'— '+d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):''}</div><div class="small">عدد الأصناف: ${(i.items||[]).reduce((s,x)=>s+(Number(x.qty)||0),0)} | المدفوع: ${money(i.paid)} | المتبقي: ${money(i.remaining)}</div><button onclick="printSavedInvoice('${esc(i.docId)}')">طباعة الفاتورة</button></div>`}
+function selectedInvoices(){let date=$('dailyDate').value||today();return invoices.filter(i=>invoiceDate(i)===date).sort((a,b)=>{let da=a.createdAt?.toDate?a.createdAt.toDate():a.createdAt?.seconds?new Date(a.createdAt.seconds*1000):new Date(0);let db=b.createdAt?.toDate?b.createdAt.toDate():b.createdAt?.seconds?new Date(b.createdAt.seconds*1000):new Date(0);return da-db})}
+function getDailyReportText(){
+    const list=selectedInvoices(),date=$('dailyDate').value||today();
+    const dateFormatted=date.split('-').reverse().join('-');
+    const total=list.reduce((s,i)=>s+(Number(i.total)||0),0);
+    const paid=list.reduce((s,i)=>s+(Number(i.paid)||0),0);
+    const remaining=list.reduce((s,i)=>s+(Number(i.remaining)||0),0);
+    const discount=list.reduce((s,i)=>s+(Number(i.discount)||0),0);
+    let report=`📊 *تقرير مبيعات مول الصعيدي*
+📅 التاريخ: *${dateFormatted}*
 
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+━━━━━━━━━━━━━━━━━━
+📈 *ملخص اليوم*
+💰 إجمالي المبيعات: *${money(total)}*
+🧾 عدد الفواتير: *${list.length}*
+🏷️ إجمالي الخصومات: *${money(discount)}*
+💵 إجمالي المدفوع: *${money(paid)}*
+⏳ إجمالي المتبقي: *${money(remaining)}*
+━━━━━━━━━━━━━━━━━━
 
-        section {
-            background: white; padding: 16px; border-radius: 16px;
-            box-shadow: 0 3px 14px rgba(0,0,0,0.06); margin-bottom: 16px;
-        }
-        h2 { font-size: 18px; margin: 0 0 12px; color: #5b21b6; }
-        
-        input, button, select {
-            width: 100%; min-height: 48px; margin: 6px 0; padding: 10px 14px;
-            border: 1px solid #ddd6e8; border-radius: 12px; font-size: 16px; background: #fff;
-        }
-        button {
-            background: #7c3aed; color: white; border: none; font-weight: bold; cursor: pointer;
-        }
-        button:active { background: #6d28d9; }
-        .btn-danger { background: #ef4444; }
-        .btn-success { background: #10b981; }
-        .btn-warning { background: #f59e0b; color: white; }
-        .btn-info { background: #3b82f6; color: white; }
-        .btn-whatsapp { background: #25d366; color: white; }
-        .btn-print { background: #0ea5e9; color: white; }
-        .row { display: flex; gap: 8px; }
-        
-        .invoice-card {
-            border: 1px solid #e9d5ff; padding: 12px; border-radius: 12px; margin-bottom: 10px; background: #faf5ff;
-        }
-        .invoice-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; }
-        .item-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #f3e8ff; font-size: 14px; align-items: center; }
-        .report-box { background: #f3e8ff; border: 1px solid #c084fc; padding: 12px; border-radius: 12px; margin-top: 10px; }
-        
-        .videoContainer { display: none; width: 100%; max-height: 250px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 10px; position: relative; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+`;
+    if(!list.length)return report+'لا توجد فواتير في هذا اليوم.';
+    list.forEach((inv,index)=>{
+        const items=Array.isArray(inv.items)?inv.items:[];
+        const subtotal=Number(inv.subtotal??items.reduce((s,x)=>s+(Number(x.lineTotal??(Number(x.price||0)*Number(x.qty||0)))||0),0));
+        const disc=Number(inv.discount)||0;
+        const finalTotal=Number(inv.total??Math.max(0,subtotal-disc));
+        const invoicePaid=Number(inv.paid)||0;
+        const invoiceRemaining=Number(inv.remaining??Math.max(0,finalTotal-invoicePaid));
+        const invoiceChange=Number(inv.change)||0;
+        const created=inv.createdAt?.toDate?inv.createdAt.toDate():inv.createdAt?.seconds?new Date(inv.createdAt.seconds*1000):null;
+        const time=created?created.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):'—';
+        report+=`🧾 *الفاتورة رقم ${index+1}*
+🔢 رقم الفاتورة: ${inv.invoiceNo||'—'}
+🕒 الوقت: ${time}
+👤 العميل: ${inv.clientName||'عميل نقدي'}`;
+        if(inv.clientPhone)report+=`\n📞 الهاتف: ${inv.clientPhone}`;
+        report+=`
 
-        /* تنسيق مخصص للطباعة الحرارية */
-        @media print {
-            body * { visibility: hidden; }
-            #printableInvoice, #printableInvoice * { visibility: visible; }
-            #printableInvoice { position: absolute; left: 0; top: 0; width: 100%; padding: 10px; background: #fff; color: #000; }
-        }
-    </style>
-</head>
-<body>
-
-    <h1 style="print-color-adjust: exact;">مول الصعيدي 🛒</h1>
-
-    <!-- شريط التنقل بين الشاشات -->
-    <div class="nav-tabs">
-        <button id="tabBtn-cashier" class="active" onclick="switchTab('cashier')">🛒 الكاشير</button>
-        <button id="tabBtn-inventory" onclick="switchTab('inventory')">📦 المخزن</button>
-        <button id="tabBtn-daily" onclick="switchTab('daily')">📅 الفواتير اليومية</button>
-        <button id="tabBtn-reports" onclick="switchTab('reports')">📊 كشف الحساب</button>
-    </div>
-
-    <!-- 1. شاشة الكاشير والفاتورة -->
-    <div id="tab-cashier" class="tab-content active">
-        <section>
-            <h2>شاشة البيع والفاتورة</h2>
-            
-            <div class="row">
-                <input type="text" id="clientName" placeholder="اسم العميل">
-                <input type="text" id="clientPhone" placeholder="رقم الهاتف">
-            </div>
-
-            <div id="videoContainer-cashier" class="videoContainer">
-                <video id="interactive-cashier" muted autoplay></video>
-                <button class="btn-danger" style="position: absolute; bottom: 10px; left: 10px; width: auto; min-height: 36px; padding: 0 16px;" onclick="stopCamera('cashier')">إغلاق الكاميرا</button>
-            </div>
-            <button class="btn-info" onclick="startCamera('cashier')">📷 مسح الباركود بالكاميرا للبيع</button>
-
-            <input type="text" id="searchBarcode" placeholder="ابحث بالباركود أو اسم الصنف..." oninput="filterAndAddProduct()">
-            <select id="productSelect" onchange="addProductToCart()"></select>
-            
-            <div id="cartList" style="margin-top: 10px;"></div>
-            
-            <div style="background: #faf5ff; padding: 12px; border-radius: 12px; margin-top: 10px; border: 1px solid #e9d5ff;">
-                <div class="row">
-                    <div style="flex: 1;">
-                        <label style="font-size: 13px; font-weight: bold; color: #5b21b6; display: block; margin-bottom: 2px;">قيمة الخصم (ج.م):</label>
-                        <input type="number" id="discountVal" placeholder="0" oninput="renderCart()" value="0">
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="font-size: 13px; font-weight: bold; color: #10b981; display: block; margin-bottom: 2px;">المبلغ المدفوع (ج.م):</label>
-                        <input type="number" id="paidVal" placeholder="0" oninput="renderCart()" value="0">
-                    </div>
-                </div>
-                
-                <div id="invoiceSummary" style="font-size: 15px; margin-top: 10px; line-height: 1.6; border-top: 1px dashed #d8b4fe; padding-top: 8px;">
-                    إجمالي الأصناف: 0 ج.م<br>
-                    الخصم: 0 ج.م<br>
-                    <b style="color: #7c3aed; font-size: 17px;">الإجمالي النهائي: 0 ج.م</b><br>
-                    <b style="color: #10b981; font-size: 17px;">المتبقي / الباقي (السالب): 0 ج.م</b>
-                </div>
-            </div>
-
-            <button onclick="checkoutInvoice()" style="margin-top: 12px;">إتمام وحفظ الفاتورة</button>
-        </section>
-    </div>
-
-    <!-- 2. شاشة المخزن -->
-    <div id="tab-inventory" class="tab-content">
-        <section>
-            <h2>إدارة المخزن والأصناف</h2>
-            <div id="videoContainer-inventory" class="videoContainer">
-                <video id="interactive-inventory" muted autoplay></video>
-                <button class="btn-danger" style="position: absolute; bottom: 10px; left: 10px; width: auto; min-height: 36px; padding: 0 16px;" onclick="stopCamera('inventory')">إغلاق الكاميرا</button>
-            </div>
-            <button class="btn-info" onclick="startCamera('inventory')">📷 فتح الكاميرا لمسح الباركود</button>
-            
-            <input type="hidden" id="pEditId">
-            <input type="text" id="pBarcode" placeholder="باركود الصنف">
-            <input type="text" id="pName" placeholder="اسم الصنف">
-            <div class="row">
-                <input type="number" id="pPrice" placeholder="السعر">
-                <input type="number" id="pQty" placeholder="العدد / الكمية">
-            </div>
-            <button class="btn-success" id="saveProductBtn" onclick="saveProduct()">حفظ صنف جديد</button>
-            <button class="btn-danger" id="cancelEditBtn" onclick="resetProductForm()" style="display:none;">إلغاء التعديل</button>
-            
-            <h3 style="margin-top: 20px; color: #5b21b6;">قائمة الأصناف الحالية بالمخزن (تعديل / حذف)</h3>
-            <div id="inventoryList"></div>
-        </section>
-    </div>
-
-    <!-- 3. شاشة الفواتير اليومية (تعديل + حذف + واتساب + طباعة) -->
-    <div id="tab-daily" class="tab-content">
-        <section>
-            <h2>الفواتير اليومية وتقارير المبيعات</h2>
-            <label style="display:block; margin-bottom:6px; font-weight:bold;">اختر التاريخ:</label>
-            <input type="date" id="dailyDate" onchange="renderDailyInvoices()">
-            
-            <div style="margin-top: 10px; display: flex; gap: 6px;">
-                <button class="btn-whatsapp" style="flex:1; font-size:13px;" onclick="shareDailyReportWhatsApp()">📤 مشاركة التقرير واتساب</button>
-                <button class="btn-info" style="flex:1; font-size:13px;" onclick="downloadDailyReportFile()">📥 تحميل تقرير اليوم كملف</button>
-            </div>
-
-            <div id="dailyInvoicesContainer" style="margin-top: 10px;"></div>
-        </section>
-    </div>
-
-    <!-- 4. شاشة كشف الحساب والتقارير (محمية بكلمة سر 1760) -->
-    <div id="tab-reports" class="tab-content">
-        <section>
-            <h2>📊 كشف الحساب والتقارير (محمي)</h2>
-            <div id="passSection">
-                <input type="password" id="reportPass" placeholder="أدخل كلمة السر (1760)">
-                <button class="btn-warning" onclick="unlockReports()">فتح كشف الحساب</button>
-            </div>
-
-            <div id="reportsContent" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h3 style="margin: 0; color: #6d28d9;">ملخص التقارير اليومية والشهرية</h3>
-                    <button class="btn-danger" style="width: auto; min-height: 36px; padding: 4px 12px;" onclick="lockReports()">قفل</button>
-                </div>
-                
-                <label style="display:block; margin-top:10px; font-weight:bold;">اختر التاريخ للتقرير:</label>
-                <input type="date" id="reportDate" onchange="generateReport()">
-
-                <div id="reportResult" class="report-box">
-                    اختر تاريخاً لعرض تفاصيل الحساب.
-                </div>
-            </div>
-        </section>
-    </div>
-
-    <!-- عنصر خفي مخصص لطباعة الفاتورة -->
-    <div id="printableInvoice" style="display: none;"></div>
-
-    <script>
-        const REPORT_PASSWORD = "1760";
-
-        let products = JSON.parse(localStorage.getItem('products') || '[]');
-        let cart = [];
-        let invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
-        let codeReader = null;
-        let editingInvoiceId = null;
-
-        function switchTab(tabId) {
-            stopCamera('cashier');
-            stopCamera('inventory');
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-tabs button').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById('tab-' + tabId).classList.add('active');
-            document.getElementById('tabBtn-' + tabId).classList.add('active');
-
-            if(tabId === 'inventory') renderInventoryList();
-            if(tabId === 'daily') {
-                document.getElementById('dailyDate').valueAsDate = new Date();
-                renderDailyInvoices();
-            }
-        }
-
-        function startCamera(mode) {
-            let containerId = mode === 'cashier' ? 'videoContainer-cashier' : 'videoContainer-inventory';
-            let videoId = mode === 'cashier' ? 'interactive-cashier' : 'interactive-inventory';
-
-            document.getElementById(containerId).style.display = 'block';
-            codeReader = new ZXing.BrowserBarcodeReader();
-            codeReader.decodeFromVideoDevice(null, videoId, (result, err) => {
-                if (result) {
-                    let scannedCode = result.text;
-                    if(mode === 'inventory') {
-                        document.getElementById('pBarcode').value = scannedCode;
-                        let existing = products.find(p => p.barcode === scannedCode);
-                        if(existing) {
-                            document.getElementById('pEditId').value = existing.id;
-                            document.getElementById('pName').value = existing.name;
-                            document.getElementById('pPrice').value = existing.price;
-                            document.getElementById('pQty').value = existing.qty;
-                            document.getElementById('saveProductBtn').innerText = 'تعديل الصنف الحالي';
-                            document.getElementById('cancelEditBtn').style.display = 'block';
-                            alert('تم العثور على الصنف، يمكنك تعديله الآن: ' + existing.name);
-                        } else {
-                            alert('باركود جديد: ' + scannedCode + ' - أدخل بياناته لحفظه');
-                        }
-                    } else if(mode === 'cashier') {
-                        let found = products.find(p => p.barcode === scannedCode);
-                        if(found) {
-                            let cartItem = cart.find(c => c.id == found.id);
-                            if(cartItem) cartItem.qty++;
-                            else cart.push({ ...found, qty: 1 });
-                            renderCart();
-                            alert('تمت إضافة: ' + found.name);
-                        } else {
-                            alert('هذا الباركود غير مسجل بالمخزن: ' + scannedCode);
-                        }
-                    }
-                    stopCamera(mode);
-                }
-            }).catch(err => console.error(err));
-        }
-
-        function stopCamera(mode) {
-            if(codeReader) codeReader.reset();
-            let containerCashier = document.getElementById('videoContainer-cashier');
-            let containerInv = document.getElementById('videoContainer-inventory');
-            if(containerCashier) containerCashier.style.display = 'none';
-            if(containerInv) containerInv.style.display = 'none';
-        }
-
-        function unlockReports() {
-            let pass = document.getElementById('reportPass').value;
-            if(pass === REPORT_PASSWORD) {
-                document.getElementById('passSection').style.display = 'none';
-                document.getElementById('reportsContent').style.display = 'block';
-                document.getElementById('reportDate').valueAsDate = new Date();
-                generateReport();
-            } else {
-                alert('كلمة السر غير صحيحة!');
-            }
-        }
-
-        function lockReports() {
-            document.getElementById('passSection').style.display = 'block';
-            document.getElementById('reportsContent').style.display = 'none';
-            document.getElementById('reportPass').value = '';
-        }
-
-        function saveProduct() {
-            let editId = document.getElementById('pEditId').value;
-            let barcode = document.getElementById('pBarcode').value.trim();
-            let name = document.getElementById('pName').value.trim();
-            let price = parseFloat(document.getElementById('pPrice').value) || 0;
-            let qty = parseInt(document.getElementById('pQty').value) || 0;
-
-            if(!name) {
-                alert('يرجى إدخال اسم الصنف على الأقل');
-                return;
-            }
-
-            if(editId) {
-                let prod = products.find(p => p.id == editId);
-                if(prod) {
-                    prod.barcode = barcode;
-                    prod.name = name;
-                    prod.price = price;
-                    prod.qty = qty;
-                }
-                alert('تم تحديث الصنف بنجاح!');
-                resetProductForm();
-            } else {
-                let existing = products.find(p => (barcode && p.barcode === barcode) || p.name.toLowerCase() === name.toLowerCase());
-                if(existing) {
-                    existing.qty += qty;
-                    if(price > 0) existing.price = price;
-                    alert('الصنف موجود مسبقاً، تم زيادة الكمية بنجاح!');
-                } else {
-                    products.push({ id: Date.now(), barcode, name, price, qty });
-                    alert('تم حفظ الصنف الجديد بنجاح!');
-                }
-                clearProductForm();
-            }
-
-            localStorage.setItem('products', JSON.stringify(products));
-            updateProductSelect();
-            renderInventoryList();
-        }
-
-        function editProduct(id) {
-            let p = products.find(item => item.id === id);
-            if(!p) return;
-            document.getElementById('pEditId').value = p.id;
-            document.getElementById('pBarcode').value = p.barcode || '';
-            document.getElementById('pName').value = p.name;
-            document.getElementById('pPrice').value = p.price;
-            document.getElementById('pQty').value = p.qty;
-            document.getElementById('saveProductBtn').innerText = 'تعديل الصنف الحالي';
-            document.getElementById('cancelEditBtn').style.display = 'block';
-            window.scrollTo({top: 0, behavior: 'smooth'});
-        }
-
-        function deleteProduct(id) {
-            if(confirm('هل أنت متأكد من حذف هذا الصنف من المخزن نهائياً؟')) {
-                products = products.filter(item => item.id !== id);
-                localStorage.setItem('products', JSON.stringify(products));
-                updateProductSelect();
-                renderInventoryList();
-                alert('تم حذف الصنف بنجاح.');
-            }
-        }
-
-        function resetProductForm() {
-            document.getElementById('pEditId').value = '';
-            clearProductForm();
-            document.getElementById('saveProductBtn').innerText = 'حفظ صنف جديد';
-            document.getElementById('cancelEditBtn').style.display = 'none';
-        }
-
-        function clearProductForm() {
-            document.getElementById('pBarcode').value = '';
-            document.getElementById('pName').value = '';
-            document.getElementById('pPrice').value = '';
-            document.getElementById('pQty').value = '';
-        }
-
-        function updateProductSelect() {
-            let select = document.getElementById('productSelect');
-            select.innerHTML = '<option value="">-- أو اختر صنفاً من القائمة --</option>';
-            products.forEach(p => {
-                select.innerHTML += `<option value="${p.id}">${p.name} - السعر: ${p.price}ج.م (متاح: ${p.qty})</option>`;
+📦 *الأصناف المباعة*
+──────────────────
+`;
+        if(!items.length){
+            report+='لا توجد أصناف مسجلة في الفاتورة.\n';
+        }else{
+            items.forEach((item,itemIndex)=>{
+                const qty=Number(item.qty)||0;
+                const price=Number(item.price)||0;
+                const lineTotal=Number(item.lineTotal??(price*qty));
+                report+=`
+*${itemIndex+1}. ${item.name||'صنف بدون اسم'}*
+   الكمية: ${qty}
+   سعر القطعة: ${money(price)}
+   إجمالي الصنف: *${money(lineTotal)}*
+`;
             });
         }
+        report+=`
+──────────────────
+💵 *ملخص الحساب*
+إجمالي الأصناف: ${money(subtotal)}
+الخصم: ${money(disc)}
+*الإجمالي النهائي: ${money(finalTotal)}*
+المدفوع: ${money(invoicePaid)}
+المتبقي على العميل: *${money(invoiceRemaining)}*`;
+        if(invoiceChange>0)report+=`\nالباقي للعميل: *${money(invoiceChange)}*`;
+        report+=`
+━━━━━━━━━━━━━━━━━━
 
-        function renderInventoryList() {
-            let container = document.getElementById('inventoryList');
-            container.innerHTML = '';
-            if(products.length === 0) {
-                container.innerHTML = '<p style="color:#666;">لا توجد أصناف مسجلة بعد.</p>';
-                return;
-            }
-            products.forEach(p => {
-                container.innerHTML += `
-                    <div style="font-size:14px; padding:8px 0; border-bottom: 1px dashed #ddd; display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <b>${p.name}</b> (باركود: ${p.barcode || 'بدون'})<br>
-                            <small style="color:#555;">السعر: ${p.price}ج.م | المتاح: <b>${p.qty}</b></small>
-                        </div>
-                        <div style="display:flex; gap:4px;">
-                            <button class="btn-info" style="width:auto; min-height:32px; padding:2px 8px; font-size:12px;" onclick="editProduct(${p.id})">تعديل</button>
-                            <button class="btn-danger" style="width:auto; min-height:32px; padding:2px 8px; font-size:12px;" onclick="deleteProduct(${p.id})">حذف</button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function filterAndAddProduct() {
-            let query = document.getElementById('searchBarcode').value.trim().toLowerCase();
-            if(!query) return;
-            let found = products.find(p => p.barcode === query || p.name.toLowerCase().includes(query));
-            if(found) {
-                let cartItem = cart.find(c => c.id == found.id);
-                if(cartItem) cartItem.qty++;
-                else cart.push({ ...found, qty: 1 });
-                renderCart();
-                document.getElementById('searchBarcode').value = '';
-            }
-        }
-
-        function addProductToCart() {
-            let id = document.getElementById('productSelect').value;
-            if(!id) return;
-            let product = products.find(p => p.id == id);
-            let cartItem = cart.find(c => c.id == id);
-            if(cartItem) cartItem.qty++;
-            else cart.push({ ...product, qty: 1 });
-            renderCart();
-            document.getElementById('productSelect').value = '';
-        }
-
-        function renderCart() {
-            let container = document.getElementById('cartList');
-            container.innerHTML = '';
-            let subTotal = 0;
-            
-            cart.forEach((item, index) => {
-                let itemTotal = item.price * item.qty;
-                subTotal += itemTotal;
-                container.innerHTML += `
-                    <div class="item-row">
-                        <span><b>${item.name}</b> (${item.price} ج.م)</span>
-                        <span>
-                            <button onclick="changeCartQty(${index}, -1)" style="width:30px;height:30px;min-height:30px;padding:0;">-</button>
-                            <b style="padding: 0 6px;">${item.qty}</b>
-                            <button onclick="changeCartQty(${index}, 1)" style="width:30px;height:30px;min-height:30px;padding:0;">+</button>
-                            = ${itemTotal} ج.م
-                        </span>
-                    </div>
-                `;
-            });
-
-            let discount = parseFloat(document.getElementById('discountVal').value) || 0;
-            let paid = parseFloat(document.getElementById('paidVal').value) || 0;
-            let finalTotal = Math.max(0, subTotal - discount);
-            let change = paid - finalTotal;
-
-            document.getElementById('invoiceSummary').innerHTML = `
-                إجمالي الأصناف: ${subTotal} ج.م<br>
-                الخصم: ${discount} ج.م<br>
-                <b style="color: #7c3aed; font-size: 17px;">الإجمالي النهائي: ${finalTotal} ج.م</b><br>
-                <b style="color: ${change < 0 ? '#ef4444' : '#10b981'}; font-size: 17px;">المتبقي / الباقي (السالب): ${change} ج.م</b>
-            `;
-        }
-
-        function changeCartQty(index, delta) {
-            cart[index].qty += delta;
-            if(cart[index].qty <= 0) cart.splice(index, 1);
-            renderCart();
-        }
-
-        function checkoutInvoice() {
-            if(cart.length === 0) {
-                alert('الفاتورة فارغة!');
-                return;
-            }
-            let clientName = document.getElementById('clientName').value.trim() || 'عميل نقدي';
-            let clientPhone = document.getElementById('clientPhone').value.trim() || '-';
-            let subTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            let discount = parseFloat(document.getElementById('discountVal').value) || 0;
-            let finalTotal = Math.max(0, subTotal - discount);
-            let paid = parseFloat(document.getElementById('paidVal').value) || 0;
-            let change = paid - finalTotal;
-
-            let now = new Date();
-            let savedInvoice;
-            
-            if(editingInvoiceId) {
-                let inv = invoices.find(i => i.id === editingInvoiceId);
-                if(inv) {
-                    inv.clientName = clientName;
-                    inv.clientPhone = clientPhone;
-                    inv.items = [...cart];
-                    inv.subTotal = subTotal;
-                    inv.discount = discount;
-                    inv.finalTotal = finalTotal;
-                    inv.paid = paid;
-                    inv.change = change;
-                    savedInvoice = inv;
-                }
-                editingInvoiceId = null;
-                alert('تم تعديل الفاتورة بنجاح!');
-            } else {
-                savedInvoice = { 
-                    id: Date.now(), 
-                    dateStr: now.toISOString().split('T')[0], 
-                    timeStr: now.toLocaleTimeString('ar-EG'),
-                    dayName: now.toLocaleDateString('ar-EG', { weekday: 'long' }),
-                    clientName,
-                    clientPhone,
-                    items: [...cart], 
-                    subTotal, discount, finalTotal, paid, change
-                };
-                invoices.push(savedInvoice);
-                
-                cart.forEach(cartItem => {
-                    let prod = products.find(p => p.id === cartItem.id);
-                    if(prod) prod.qty = Math.max(0, prod.qty - cartItem.qty);
-                });
-                alert('تم إتمام وحفظ الفاتورة بنجاح!');
-            }
-
-            localStorage.setItem('invoices', JSON.stringify(invoices));
-            localStorage.setItem('products', JSON.stringify(products));
-
-            // طباعة تلقائية بعد الحفظ (اختياري أو حسب الرغبة)
-            if(confirm('هل تريد طباعة الفاتورة الآن؟')) {
-                printInvoiceObject(savedInvoice);
-            }
-
-            cart = [];
-            document.getElementById('clientName').value = '';
-            document.getElementById('clientPhone').value = '';
-            document.getElementById('discountVal').value = 0;
-            document.getElementById('paidVal').value = 0;
-            renderCart();
-            updateProductSelect();
-        }
-
-        function editInvoice(id) {
-            let inv = invoices.find(i => i.id === id);
-            if(!inv) return;
-            
-            editingInvoiceId = inv.id;
-            document.getElementById('clientName').value = inv.clientName;
-            document.getElementById('clientPhone').value = inv.clientPhone;
-            document.getElementById('discountVal').value = inv.discount;
-            document.getElementById('paidVal').value = inv.paid;
-            cart = [...inv.items];
-            
-            renderCart();
-            switchTab('cashier');
-            alert('تم جلب الفاتورة للتعديل في شاشة الكاشير. عدل ما تحتاجه ثم اضغط إتمام وحفظ الفاتورة.');
-        }
-
-        function deleteInvoice(id) {
-            if(confirm('هل أنت متأكد من حذف هذه الفاتورة نهائياً؟')) {
-                invoices = invoices.filter(inv => inv.id !== id);
-                localStorage.setItem('invoices', JSON.stringify(invoices));
-                renderDailyInvoices();
-                alert('تم حذف الفاتورة بنجاح.');
-            }
-        }
-
-        // دالة طباعة الفاتورة المنفصلة
-        function printInvoice(id) {
-            let inv = invoices.find(i => i.id === id);
-            if(inv) printInvoiceObject(inv);
-        }
-
-        function printInvoiceObject(inv) {
-            let itemsHtml = inv.items.map(i => `
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <span>${i.name} (×${i.qty})</span>
-                    <span>${i.price * i.qty} ج.م</span>
-                </div>
-            `).join('');
-
-            let printContainer = document.getElementById('printableInvoice');
-            printContainer.innerHTML = `
-                <div style="text-align: center; font-family: sans-serif; font-size: 14px; direction: rtl;">
-                    <h2 style="margin: 0 0 5px 0;">مول الصعيدي 🛒</h2>
-                    <p style="margin: 0 0 5px 0; font-size: 12px;">تاريخ: ${inv.dateStr} | ${inv.timeStr}</p>
-                    <p style="margin: 0 0 10px 0; font-size: 12px;">العميل: ${inv.clientName} (${inv.clientPhone})</p>
-                    <hr style="border: dashed 1px #000; margin: 5px 0;">
-                    <div style="text-align: right;">${itemsHtml}</div>
-                    <hr style="border: dashed 1px #000; margin: 5px 0;">
-                    <div style="text-align: right; font-size: 13px;">
-                        إجمالي الأصناف: ${inv.subTotal} ج.م<br>
-                        الخصم: ${inv.discount} ج.م<br>
-                        <b>الإجمالي النهائي: ${inv.finalTotal} ج.م</b><br>
-                        المدفوع: ${inv.paid} ج.م<br>
-                        المتبقي (الباقي): ${inv.change} ج.م
-                    </div>
-                    <p style="margin-top: 15px; font-size: 12px;">شكراً لتعاملكم معنا ❤️</p>
-                </div>
-            `;
-            printContainer.style.display = 'block';
-            window.print();
-            printContainer.style.display = 'none';
-        }
-
-        function shareInvoiceWhatsApp(id) {
-            let inv = invoices.find(i => i.id === id);
-            if(!inv) return;
-            
-            let itemsText = inv.items.map(i => `- ${i.name} (×${i.qty}) = ${i.price * i.qty}ج`).join('\n');
-            let text = `🛒 *مول الصعيدي* \n📅 فاتورة بتاريخ: ${inv.dateStr} (${inv.timeStr})\n👤 العميل: ${inv.clientName} (${inv.clientPhone})\n\n*الأصناف المباعة:*\n${itemsText}\n\nالإجمالي: ${inv.finalTotal} ج.م\nالمدفوع: ${inv.paid} ج.م\nالمتبقي: ${inv.change} ج.م`;
-            
-            let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-            window.open(url, '_blank');
-        }
-
-        function getDailyReportText() {
-            let selectedDate = document.getElementById('dailyDate').value;
-            let filtered = invoices.filter(inv => inv.dateStr === selectedDate);
-            let totalSales = filtered.reduce((sum, inv) => sum + inv.finalTotal, 0);
-
-            let report = `📊 تقرير مبيعات مول الصعيدي - يوم: ${selectedDate}\n`;
-            report += `----------------------------------------\n`;
-            report += `إجمالي مبيعات اليوم: ${totalSales} ج.م\n`;
-            report += `عدد الفواتير: ${filtered.length}\n`;
-            report += `----------------------------------------\n\n`;
-
-            filtered.forEach((inv, index) => {
-                report += `🧾 فاتورة #${index + 1} [${inv.timeStr}]\n`;
-                report += `👤 العميل: ${inv.clientName} (${inv.clientPhone})\n`;
-                report += `الأصناف المباعة:\n`;
-                inv.items.forEach(i => {
-                    report += `  • ${i.name} (العدد: ${i.qty}) - السعر: ${i.price * i.qty}ج\n`;
-                });
-                report += `الخصم: ${inv.discount}ج | النهائي: ${inv.finalTotal}ج | المدفوع: ${inv.paid}ج | المتبقي: ${inv.change}ج\n`;
-                report += `----------------------------------------\n`;
-            });
-
-            return report;
-        }
-
-        function shareDailyReportWhatsApp() {
-            let text = getDailyReportText();
-            let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-            window.open(url, '_blank');
-        }
-
-        function downloadDailyReportFile() {
-            let selectedDate = document.getElementById('dailyDate').value;
-            let text = getDailyReportText();
-            let blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement('a');
-            a.href = url;
-            a.download = `تقرير_مبيعات_${selectedDate}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function renderDailyInvoices() {
-            let selectedDate = document.getElementById('dailyDate').value;
-            let container = document.getElementById('dailyInvoicesContainer');
-            container.innerHTML = '';
-            
-            let filtered = invoices.filter(inv => inv.dateStr === selectedDate);
-            let totalDaySales = filtered.reduce((sum, inv) => sum + inv.finalTotal, 0);
-
-            let headerHtml = `
-                <div style="background:#ede9fe; padding:10px; border-radius:10px; margin-bottom:10px;">
-                    <span>إجمالي مبيعات اليوم: <b>${totalDaySales} ج.م</b> (${filtered.length} فاتورة)</span>
-                </div>
-            `;
-
-            if(filtered.length === 0) {
-                container.innerHTML = headerHtml + '<p style="color:#666;">لا توجد فواتير في هذا التاريخ.</p>';
-                return;
-            }
-
-            let html = headerHtml;
-            filtered.forEach((inv, invIndex) => {
-                let itemsHtml = inv.items.map(i => `<div class="item-row"><span>${i.name} (×${i.qty})</span><span>${i.price * i.qty} ج.م</span></div>`).join('');
-                html += `
-                    <div class="invoice-card">
-                        <div class="invoice-header">
-                            <span>فاتورة #${invIndex + 1} (${inv.timeStr}) - ${inv.clientName}</span>
-                            <span style="color:#7c3aed;">النهائي: ${inv.finalTotal} ج.م</span>
-                        </div>
-                        ${itemsHtml}
-                        <div style="font-size: 13px; margin-top: 6px; color: #4b5563;">
-                            الخصم: ${inv.discount || 0} ج.م | المدفوع: ${inv.paid || 0} ج.م | المتبقي (الباقي/السالب): <b style="color:${inv.change < 0 ? '#ef4444':'#10b981'}">${inv.change} ج.م</b>
-                        </div>
-                        <div class="row" style="margin-top: 8px; display: flex; gap: 4px;">
-                            <button class="btn-print" style="flex: 1; font-size: 12px; min-height: 38px;" onclick="printInvoice(${inv.id})">🖨️ طباعة</button>
-                            <button class="btn-info" style="flex: 1; font-size: 12px; min-height: 38px;" onclick="editInvoice(${inv.id})">تعديل</button>
-                            <button class="btn-whatsapp" style="flex: 1; font-size: 12px; min-height: 38px;" onclick="shareInvoiceWhatsApp(${inv.id})">واتساب</button>
-                            <button class="btn-danger" style="flex: 1; font-size: 12px; min-height: 38px;" onclick="deleteInvoice(${inv.id})">حذف</button>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        }
-
-        function generateReport() {
-            let selectedDate = document.getElementById('reportDate').value;
-            if(!selectedDate) return;
-
-            let filtered = invoices.filter(inv => inv.dateStr === selectedDate);
-            let totalSales = filtered.reduce((sum, inv) => sum + inv.finalTotal, 0);
-
-            let html = `
-                <h4>📅 تقارير يوم: ${selectedDate}</h4>
-                <p><b>إجمالي المبيعات:</b> ${totalSales} ج.م</p>
-                <p><b>عدد الفواتير:</b> ${filtered.length}</p>
-            `;
-            document.getElementById('reportResult').innerHTML = html;
-        }
-
-        updateProductSelect();
-        renderCart();
-    </script>
-</body>
-</html>
+`;
+    });
+    return report+'❤️ شكراً لتعاملكم مع مول الصعيدي';
+}
+function shareDailyReportWhatsApp(){const textMsg=getDailyReportText();window.open('https://wa.me/?text='+encodeURIComponent(textMsg),'_blank')}
+function downloadDailyReportFile(){let list=selectedInvoices();let rows=[['رقم الفاتورة','التاريخ','العميل','الهاتف','الإجمالي','الخصم','المدفوع','المتبقي'],...list.map(i=>[i.invoiceNo||i.docId,invoiceDate(i),i.clientName||'',i.clientPhone||'',i.total||0,i.discount||0,i.paid||0,i.remaining||0])];downloadText('report-'+($('dailyDate').value||today())+'.csv','\ufeff'+rows.map(r=>r.map(csv).join(',')).join('\r\n'),'text/csv;charset=utf-8')}
+function unlockReports(){if($('reportPass').value===REPORT_PASSWORD){$('passSection').style.display='none';$('reportsContent').style.display='block';$('reportDate').value=today();generateReport()}else alert('كلمة المرور غير صحيحة')}function lockReports(){$('passSection').style.display='block';$('reportsContent').style.display='none';$('reportPass').value=''}function generateReport(){if(!$('reportResult'))return;let date=$('reportDate').value||today(),list=invoices.filter(i=>invoiceDate(i)===date),total=list.reduce((s,i)=>s+(Number(i.total)||0),0),paid=list.reduce((s,i)=>s+(Number(i.paid)||0),0),discount=list.reduce((s,i)=>s+(Number(i.discount)||0),0),remaining=list.reduce((s,i)=>s+(Number(i.remaining)||0),0);$('reportResult').innerHTML=`<b>تقرير يوم ${date}</b><br>عدد الفواتير: ${list.length}<br>إجمالي المبيعات: ${money(total)}<br>إجمالي الخصومات: ${money(discount)}<br>إجمالي المدفوع: ${money(paid)}<br>إجمالي المتبقي: ${money(remaining)}<hr><b>ملخص الشهر</b><br>${monthSummary(date)}`}
+function monthSummary(date){let month=date.slice(0,7),list=invoices.filter(i=>invoiceDate(i).startsWith(month)),total=list.reduce((s,i)=>s+(Number(i.total)||0),0),paid=list.reduce((s,i)=>s+(Number(i.paid)||0),0);return `عدد الفواتير: ${list.length}<br>المبيعات: ${money(total)}<br>المدفوع: ${money(paid)}<br>المتبقي: ${money(list.reduce((s,i)=>s+(Number(i.remaining)||0),0))}`}
+function printSavedInvoice(id){let i=invoices.find(x=>x.docId===id);if(i)printInvoice(i)}function printInvoice(i){let d=i.createdAt?.toDate?i.createdAt.toDate():i.createdAt instanceof Date?i.createdAt:new Date();$('printArea').innerHTML=`<div style="font-family:Arial,sans-serif;direction:rtl"><h2 style="text-align:center">مول الصعيدي</h2><p>رقم الفاتورة: ${esc(i.invoiceNo||i.docId||'')}</p><p>التاريخ: ${d.toLocaleString('ar-EG')}</p><p>العميل: ${esc(i.clientName||'عميل نقدي')} — ${esc(i.clientPhone||'')}</p><hr>${(i.items||[]).map(x=>`<p>${esc(x.name)} — ${x.qty} × ${money(x.price)} = ${money(x.lineTotal??x.qty*x.price)}</p>`).join('')}<hr><p>الإجمالي: ${money(i.subtotal)}</p><p>الخصم: ${money(i.discount)}</p><h3>الصافي: ${money(i.total)}</h3><p>المدفوع: ${money(i.paid)} — المتبقي: ${money(i.remaining)}</p><hr><p>المرتجع خلال 3 أيام، والاستبدال خلال أسبوع وفق سياسة المحل.</p><p style="text-align:center">شكرًا لزيارتكم</p></div>`;window.print()}
+function exportBackup(){let data={exportedAt:new Date().toISOString(),products,invoices};downloadText('mall-saeedy-backup-'+today()+'.json',JSON.stringify(data,null,2),'application/json')}
+function downloadText(name,text,type){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}function csv(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function startCamera(mode){try{stopCamera();if(!window.ZXing){alert('مكتبة الباركود لم يتم تحميلها');return}let container=$('camera-'+mode),video=$('video-'+mode);container.style.display='block';reader=new ZXing.BrowserMultiFormatReader();reader.decodeFromVideoDevice(undefined,video,(result,err)=>{if(result){let code=result.getText();stopCamera();if(mode==='inventory'){$('pBarcode').value=code;let p=products.find(x=>x.barcode===code);if(p)editProduct(p.docId);else alert('باركود جديد. أكمل بيانات الصنف ثم احفظ.')}else{let p=products.find(x=>String(x.barcode||'')===code);if(p)addProduct(p);else alert('الباركود غير مسجل بالمخزن: '+code)}}})}catch(e){stopCamera();alert('تعذر تشغيل الكاميرا. اسمح للموقع باستخدام الكاميرا وافتحه عبر HTTPS. '+e.message)}}function stopCamera(){try{if(reader)reader.reset()}catch(e){}reader=null;['cashier','inventory'].forEach(m=>{let c=$('camera-'+m);if(c)c.style.display='none'})}
+$('dailyDate').value=today();$('reportDate').value=today();renderCart();
+</script></body></html>
