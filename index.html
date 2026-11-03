@@ -1,170 +1,819 @@
-// ==========================================================
-// 🛒 الشفرة البرمجية الشاملة لتطبيق "مول الصعيدي" (بدون أخطاء)
-// ==========================================================
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#176b52">
+  <title>مول الصعيدي | الكاشير</title>
 
-// 1. دالة حفظ الفاتورة وإتمام البيع مع مزامنة المخزن لحظياً
-async function checkoutInvoice(customerData, cartItems, discountValue, paidValue) {
-    try {
-        if (!cartItems || cartItems.length === 0) {
-            alert("⚠️ السلة فارغة، لا يمكن إتمام الفاتورة.");
-            return false;
-        }
+  <!-- مكتبة html2canvas لمشاركة الفاتورة كصورة عبر واتساب -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-        let subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        let total = subtotal - (discountValue || 0);
-        let remaining = total - (paidValue || total);
+  <!-- مكتبات Firebase السحابية -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-        let newInvoice = {
-            id: "INV_" + Math.random().toString(36).substr(2, 6).toUpperCase(),
-            date: new Date().toISOString().slice(0, 10) + " " + new Date().toLocaleTimeString('ar-EG'),
-            customerName: customerData.name || "عميل نقدي",
-            customerPhone: customerData.phone || "بدون هاتف",
-            items: cartItems,
-            subtotal: subtotal,
-            discount: discountValue || 0,
-            total: total,
-            paid: paidValue || total,
-            remaining: remaining
-        };
-
-        // حفظ الفاتورة في سحابة فايربيส
-        if (typeof db !== 'undefined') {
-            await db.collection("invoices").add(newInvoice);
-            
-            // خصم الكميات المباعة من المخزون تلقائياً لكل صنف لضمان دقة المخزن
-            for (let item of cartItems) {
-                let productRef = db.collection("products").doc(item.id);
-                let doc = await productRef.get();
-                if (doc.exists) {
-                    let currentStock = doc.data().stock || 0;
-                    let updatedStock = Math.max(0, currentStock - item.quantity);
-                    await productRef.update({ stock: updatedStock });
-                }
-            }
-        }
-
-        alert("✅ تمت عملية البيع وحفظ الفاتورة وتحديث المخزن بنجاح تام!");
-        return true;
-    } catch (error) {
-        console.error("خطأ أثناء إتمام الفاتورة:", error);
-        alert("❌ حدث خطأ أثناء الحفظ، تأكد من الاتصال بالإنترنت.");
-        return false;
-    }
-}
-
-// 2. تصدير تقرير الـ CSV المفصل (أصناف وكميات لكل فاتورة)
-function exportDetailedCSV() {
-    let csvContent = "\uFEFFرقم الفاتورة,التاريخ,اسم العميل,رقم الهاتف,الصنف,الكمية,سعر القطعة,إجمالي الصنف,إجمالي الفاتورة\n";
-    
-    if (typeof invoices !== 'undefined' && Array.isArray(invoices)) {
-        invoices.forEach(inv => {
-            if (inv.items && inv.items.length > 0) {
-                inv.items.forEach(item => {
-                    let row = [
-                        `"${inv.id || ''}"`,
-                        `"${inv.date || ''}"`,
-                        `"${inv.customerName || 'عميل نقدي'}"`,
-                        `"${inv.customerPhone || 'بدون هاتف'}"`,
-                        `"${item.name || ''}"`,
-                        item.quantity || 0,
-                        item.price || 0,
-                        (item.quantity * item.price) || 0,
-                        inv.total || 0
-                    ].join(",");
-                    csvContent += row + "\n";
-                });
-            }
-        });
+  <style>
+    :root {
+      --green: #176b52;
+      --green-dark: #10523e;
+      --bg: #f4f6f5;
+      --card: #fff;
+      --text: #202522;
+      --muted: #68736d;
+      --border: #e1e7e3;
+      --red: #b42318;
     }
 
-    let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    let url = URL.createObjectURL(blob);
-    let a = document.createElement('a');
-    a.href = url;
-    a.download = `Saidi_Mall_Report_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
+    * { box-sizing: border-box; }
 
-// 3. إصلاح الطباعة بشكل نظيف تماماً للموبايل والمتصفحات
-function printInvoice(invoiceElementId) {
-    let element = document.getElementById(invoiceElementId);
-    if (!element) {
-        alert("عذراً، محتوى الفاتورة غير موجود للطباعة.");
-        return;
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     }
-    
-    let printContents = element.innerHTML;
-    let originalContents = document.body.innerHTML;
 
-    document.body.innerHTML = `
-        <div style="direction: rtl; font-family: Tajawal, Arial, sans-serif; padding: 20px; background: #fff; color: #000;">
-            <h2 style="text-align: center; margin-bottom: 20px;">🛒 مول الصعيدي - فاتورة مبيعات</h2>
-            ${printContents}
+    header {
+      background: var(--green);
+      color: white;
+      padding: 18px 16px;
+    }
+
+    header h1 { margin: 0; font-size: 22px; }
+    header p { margin: 5px 0 0; opacity: .9; font-size: 14px; }
+
+    main {
+      width: min(100%, 900px);
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    .tab, .primary, .secondary, .danger, .small-button {
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 11px 14px;
+    }
+
+    .tab {
+      flex: 1;
+      background: #e6ece8;
+      color: var(--text);
+    }
+
+    .tab.active, .primary {
+      background: var(--green);
+      color: white;
+    }
+
+    .primary:hover { background: var(--green-dark); }
+
+    .secondary {
+      background: #edf1ee;
+      color: var(--text);
+    }
+
+    .danger {
+      background: #fff0ef;
+      color: var(--red);
+    }
+
+    .small-button {
+      padding: 7px 10px;
+      background: #edf1ee;
+    }
+
+    .panel, .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    h3 { margin: 0 0 10px; font-size: 16px; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: white;
+      color: var(--text);
+    }
+
+    input:focus {
+      outline: 2px solid #b8d8ca;
+      border-color: var(--green);
+    }
+
+    .field { min-width: 0; }
+    .full { grid-column: 1 / -1; }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .product-list, .cart-list, .invoice-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .item-title { font-weight: 650; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .price { font-weight: 700; white-space: nowrap; }
+
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .summary {
+      border-top: 1px solid var(--border);
+      margin-top: 12px;
+      padding-top: 12px;
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 6px 0;
+    }
+
+    .notice {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 8px 0 0;
+    }
+
+    .empty {
+      padding: 15px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 560px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .full { grid-column: auto; }
+      .item { align-items: flex-start; }
+      .row.mobile-stack { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media print {
+      body { background: white; }
+      header, .tabs, #saleView, #productsView, .no-print { display: none !important; }
+      main { width: 100%; padding: 0; }
+      #receipt { display: block !important; border: 0; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>مول الصعيدي</h1>
+    <p>نظام كاشير ومخزون سحابي — الجنيه المصري</p>
+  </header>
+
+  <main>
+    <div id="cloudStatus" style="padding: 8px 12px; margin-bottom: 14px; background: #e6ece8; border-radius: 8px; font-size: 13px; text-align: center;">
+      جاري الاتصال بالسحابة...
+    </div>
+
+    <nav class="tabs no-print" aria-label="الأقسام">
+      <button class="tab active" data-view="saleView">الكاشير</button>
+      <button class="tab" data-view="productsView">المنتجات</button>
+      <button class="tab" data-view="invoicesView">الفواتير</button>
+    </nav>
+
+    <section id="saleView" class="view">
+      <div class="panel">
+        <h2>بيع جديد</h2>
+        <div class="form-grid">
+          <div class="field full">
+            <label for="productSearch">ابحث بالاسم أو امسح الباركود</label>
+            <input id="productSearch" autocomplete="off" placeholder="اكتب الاسم أو رقم الباركود">
+          </div>
+          <div class="field">
+            <label for="customerName">اسم العميل</label>
+            <input id="customerName" autocomplete="name" placeholder="عميل نقدي">
+          </div>
+          <div class="field">
+            <label for="customerPhone">رقم الهاتف مع كود الدولة بدون +</label>
+            <input id="customerPhone" inputmode="numeric" placeholder="مثال: 2010XXXXXXXX">
+          </div>
         </div>
-    `;
-    
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload(); 
-}
+      </div>
 
-// 4. خيارات مشاركة الواتساب (تقرير نصي منظم بدقة)
-function shareAsTextWhatsApp(invoice) {
-    let itemsText = invoice.items.map(i => `▪️ ${i.name} (عدد: ${i.quantity}) - ${i.price * i.quantity} ج.م`).join("\n");
-    
-    let message = `🛒 *مول الصعيدي* - فاتورة مبيعات\n` +
-                  `---------------------------\n` +
-                  `📄 *رقم الفاتورة:* ${invoice.id}\n` +
-                  `📅 *التاريخ:* ${invoice.date}\n` +
-                  `👤 *العميل:* ${invoice.customerName || 'عميل نقدي'}\n` +
-                  `---------------------------\n` +
-                  `📦 *الأصناف المباعة:*\n${itemsText}\n` +
-                  `---------------------------\n` +
-                  `💰 *إجمالي الأصناف:* ${invoice.subtotal || invoice.total} ج.م\n` +
-                  `🏷️ *الخصم:* ${invoice.discount || 0} ج.م\n` +
-                  `💵 *الإجمالي النهائي:* ${invoice.total} ج.م\n` +
-                  `💳 *المدفوع:* ${invoice.paid || invoice.total} ج.م\n` +
-                  `🔄 *المتبقي:* ${invoice.remaining || 0} ج.م\n` +
-                  `---------------------------\n` +
-                  `شكراً لتعاملكم معنا في مول الصعيدي! 🙏`;
+      <div class="panel">
+        <h3>نتائج المنتجات</h3>
+        <div id="searchResults" class="product-list"></div>
+      </div>
 
-    let encodedMessage = encodeURIComponent(message);
-    window.open(`https://api.whatsapp.com/send?text=${encodedMessage}`, '_blank');
-}
+      <div class="panel">
+        <h3>السلة</h3>
+        <div id="cartList" class="cart-list"></div>
+        <div class="summary">
+          <div class="summary-line"><span>الإجمالي</span><strong id="cartTotal">٠ ج.م</strong></div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="discount">الخصم بالجنيه</label>
+              <input id="discount" type="number" min="0" step="0.01" value="0">
+            </div>
+            <div class="field">
+              <label for="paid">المبلغ المدفوع</label>
+              <input id="paid" type="number" min="0" step="0.01" placeholder="اتركه فارغًا للدفع الكامل">
+            </div>
+          </div>
+          <div class="summary-line"><span>المطلوب بعد الخصم</span><strong id="dueTotal">٠ ج.م</strong></div>
+          <button id="completeSale" class="primary" style="width:100%;margin-top:8px">حفظ الفاتورة وتحديث المخزون</button>
+        </div>
+      </div>
+    </section>
 
-// 5. مشاركة الفاتورة كصورة احترافية عبر الواتساب
-function shareAsImageWhatsApp(elementId) {
-    const invoiceElement = document.getElementById(elementId);
-    if (!invoiceElement) {
-        alert("عذراً، عنصر الفاتورة غير موجود.");
-        return;
+    <section id="productsView" class="view hidden">
+      <div class="panel">
+        <h2>إضافة منتج</h2>
+        <form id="productForm" class="form-grid">
+          <div class="field">
+            <label for="productName">اسم المنتج</label>
+            <input id="productName" required maxlength="100" placeholder="مثال: تيشيرت أطفال">
+          </div>
+          <div class="field">
+            <label for="productPrice">السعر بالجنيه</label>
+            <input id="productPrice" required type="number" min="0" step="0.01">
+          </div>
+          <div class="field">
+            <label for="productStock">الكمية بالمخزون</label>
+            <input id="productStock" required type="number" min="0" step="1">
+          </div>
+          <div class="field">
+            <label for="productBarcode">الباركود (اختياري)</label>
+            <input id="productBarcode" inputmode="numeric">
+          </div>
+          <div class="actions full">
+            <button class="primary" type="submit">إضافة المنتج</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="row">
+          <h2>المخزون</h2>
+          <button id="exportProducts" class="secondary">تصدير المنتجات CSV</button>
+        </div>
+        <div id="productsList" class="product-list"></div>
+      </div>
+    </section>
+
+    <section id="invoicesView" class="view hidden">
+      <div class="panel">
+        <div class="row mobile-stack">
+          <h2>الفواتير</h2>
+          <button id="exportInvoices" class="secondary">تصدير الفواتير المفصل CSV</button>
+        </div>
+        <div id="invoicesList" class="invoice-list"></div>
+      </div>
+    </section>
+
+    <section id="receipt" class="panel hidden"></section>
+    <p class="notice">البيانات متزامنة ومحفوظة سحابياً عبر Firebase لضمان الدقة والسرعة.</p>
+  </main>
+
+  <script>
+    "use strict";
+
+    // إعدادات الاتصال السحابي (Firebase)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDummyKeyForSaidiMall12345",
+      authDomain: "saidimall-pos.firebaseapp.com",
+      projectId: "saidimall-pos",
+      storageBucket: "saidimall-pos.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123:web:abc"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
     }
-    
-    if (typeof html2canvas === 'undefined') {
-        alert("مكتبة تحويل الصور غير متوفرة.");
-        return;
+    const db = firebase.firestore();
+
+    let products = [];
+    let invoices = [];
+    let cart = [];
+
+    const $ = id => document.getElementById(id);
+    const money = value =>
+      new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP" })
+        .format(Number(value) || 0);
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;",
+        '"': "&quot;", "'": "&#39;"
+      })[char]);
     }
 
-    html2canvas(invoiceElement, { scale: 2 }).then(canvas => {
-        canvas.toBlob(blob => {
-            let file = new File([blob], "invoice.png", { type: "image/png" });
-            
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                navigator.share({
-                    files: [file],
-                    title: 'فاتورة مول الصعيدي',
-                    text: 'تفاصيل الفاتورة من مول الصعيدي'
-                }).catch(err => console.log('خطأ في المشاركة:', err));
-            } else {
-                let link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = 'Invoice_Saidi_Mall.png';
-                link.click();
-                alert("تم حفظ الفاتورة كصورة على جهازك، يمكنك إرسالها الآن عبر واتساب!");
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("إليك فاتورة مبيعات مول الصعيدي:")}`, '_blank');
-            }
+    function showView(viewId) {
+      document.querySelectorAll(".view").forEach(view =>
+        view.classList.toggle("hidden", view.id !== viewId)
+      );
+      document.querySelectorAll(".tab").forEach(tab =>
+        tab.classList.toggle("active", tab.dataset.view === viewId)
+      );
+      $("receipt").classList.add("hidden");
+    }
+
+    function renderSearch() {
+      const query = $("productSearch").value.trim().toLowerCase();
+      const found = products.filter(product =>
+        product.name.toLowerCase().includes(query) ||
+        (product.barcode && product.barcode.toLowerCase().includes(query))
+      );
+
+      $("searchResults").innerHTML = found.length
+        ? found.map(product => `
+          <div class="item">
+            <div>
+              <div class="item-title">${escapeHtml(product.name)}</div>
+              <div class="muted">المتاح: ${product.stock} ${product.barcode ? " · باركود: " + escapeHtml(product.barcode) : ""}</div>
+            </div>
+            <div class="row">
+              <span class="price">${money(product.price)}</span>
+              <button class="small-button" data-add="${escapeHtml(product.id)}">إضافة</button>
+            </div>
+          </div>
+        `).join("")
+        : `<div class="empty">لا توجد منتجات مطابقة.</div>`;
+
+      if (/^\d{6,}$/.test(query)) {
+        const exact = products.find(product => product.barcode === query);
+        if (exact && exact.stock > 0 && !cart.some(item => item.id === exact.id)) {
+          addToCart(exact.id);
+          $("productSearch").value = "";
+          renderSearch();
+        }
+      }
+    }
+
+    function renderCart() {
+      $("cartList").innerHTML = cart.length
+        ? cart.map(item => `
+          <div class="item">
+            <div>
+              <div class="item-title">${escapeHtml(item.name)}</div>
+              <div class="muted">${money(item.price)} للقطعة</div>
+            </div>
+            <div class="qty-controls">
+              <button class="small-button" data-minus="${escapeHtml(item.id)}">−</button>
+              <strong>${item.quantity}</strong>
+              <button class="small-button" data-plus="${escapeHtml(item.id)}">+</button>
+              <button class="danger" data-remove="${escapeHtml(item.id)}">حذف</button>
+            </div>
+          </div>
+        `).join("")
+        : `<div class="empty">السلة فارغة.</div>`;
+
+      const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const discount = Math.max(0, Number($("discount").value) || 0);
+      $("cartTotal").textContent = money(subtotal);
+      $("dueTotal").textContent = money(Math.max(0, subtotal - discount));
+    }
+
+    function renderProducts() {
+      $("productsList").innerHTML = products.length
+        ? products.map(product => `
+          <div class="item">
+            <div>
+              <div class="item-title">${escapeHtml(product.name)}</div>
+              <div class="muted">السعر: ${money(product.price)} · المخزون: ${product.stock}${product.barcode ? " · باركود: " + escapeHtml(product.barcode) : ""}</div>
+            </div>
+            <button class="danger" data-delete-product="${escapeHtml(product.id)}">حذف</button>
+          </div>
+        `).join("")
+        : `<div class="empty">لم تضف منتجات بعد.</div>`;
+    }
+
+    function renderInvoices() {
+      $("invoicesList").innerHTML = invoices.length
+        ? [...invoices].reverse().map(invoice => `
+          <div class="item">
+            <div>
+              <div class="item-title">فاتورة ${escapeHtml(String(invoice.id).slice(0, 8))}</div>
+              <div class="muted">${escapeHtml(new Date(invoice.date).toLocaleString("ar-EG"))} · ${escapeHtml(invoice.customerName)}</div>
+              <div class="muted">الهاتف: ${escapeHtml(invoice.customerPhone)}</div>
+              <div class="price">${money(invoice.total)}</div>
+            </div>
+            <button class="secondary" data-print="${escapeHtml(invoice.id)}">عرض / طباعة</button>
+          </div>
+        `).join("")
+        : `<div class="empty">لا توجد فواتير بعد.</div>`;
+    }
+
+    async function addToCart(productId) {
+      const product = products.find(item => item.id === productId);
+      if (!product || product.stock <= 0) {
+        alert("المنتج غير متوفر في المخزون.");
+        return;
+      }
+
+      const cartItem = cart.find(item => item.id === productId);
+      if (cartItem) {
+        if (cartItem.quantity >= product.stock) {
+          alert("الكمية المطلوبة أكبر من المخزون المتاح.");
+          return;
+        }
+        cartItem.quantity += 1;
+      } else {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: 1
         });
+      }
+
+      renderCart();
+    }
+
+    function showReceipt(invoice) {
+      const lines = invoice.items.map(item => `
+        <div class="summary-line">
+          <span>${escapeHtml(item.name)} × ${item.quantity}</span>
+          <span>${money(item.price * item.quantity)}</span>
+        </div>
+      `).join("");
+
+      $("receipt").innerHTML = `
+        <div id="receiptContent" style="background:#fff; padding:15px; border-radius:10px;">
+          <div style="text-align:center">
+            <h2>مول الصعيدي</h2>
+            <div>فاتورة بيع</div>
+          </div>
+          <hr>
+          <p>رقم الفاتورة: ${escapeHtml(invoice.id)}</p>
+          <p>التاريخ والوقت: ${escapeHtml(new Date(invoice.date).toLocaleString("ar-EG"))}</p>
+          <p>اسم العميل: ${escapeHtml(invoice.customerName)}</p>
+          <p>الهاتف: ${escapeHtml(invoice.customerPhone)}</p>
+          <hr>${lines}<hr>
+          <div class="summary-line"><span>الإجمالي قبل الخصم</span><strong>${money(invoice.subtotal)}</strong></div>
+          <div class="summary-line"><span>الخصم</span><strong>${money(invoice.discount)}</strong></div>
+          <div class="summary-line"><span>الإجمالي</span><strong>${money(invoice.total)}</strong></div>
+          <div class="summary-line"><span>المدفوع</span><strong>${money(invoice.paid)}</strong></div>
+          <div class="summary-line"><span>المتبقي</span><strong>${money(invoice.remaining)}</strong></div>
+          <hr>
+          <p>الاستبدال خلال ٧ أيام، والاسترجاع خلال ٣ أيام.</p>
+        </div>
+        <div class="actions no-print" style="margin-top:10px;">
+          <button class="primary" onclick="window.print()">طباعة الفاتورة</button>
+          <button class="secondary" id="shareWhatsAppText">مشاركة واتساب (نص)</button>
+          <button class="secondary" id="shareWhatsAppImage">مشاركة واتساب (صورة)</button>
+        </div>
+      `;
+
+      $("receipt").classList.remove("hidden");
+
+      // مشاركة واتساب (نص منظم)
+      $("shareWhatsAppText").addEventListener("click", () => {
+        let itemsText = invoice.items.map(i => `▪️ ${i.name} (عدد: ${i.quantity}) - ${i.price * i.quantity} ج.م`).join("\n");
+        let message = `🛒 *مول الصعيدي* - فاتورة مبيعات\n` +
+                      `---------------------------\n` +
+                      `📄 *رقم الفاتورة:* ${invoice.id}\n` +
+                      `📅 *التاريخ:* ${new Date(invoice.date).toLocaleString("ar-EG")}\n` +
+                      `👤 *العميل:* ${invoice.customerName}\n` +
+                      `---------------------------\n` +
+                      `📦 *الأصناف المباعة:*\n${itemsText}\n` +
+                      `---------------------------\n` +
+                      `💵 *الإجمالي النهائي:* ${money(invoice.total)}\n` +
+                      `💳 *المدفوع:* ${money(invoice.paid)}\n` +
+                      `🔄 *المتبقي:* ${money(invoice.remaining)}\n` +
+                      `---------------------------\n` +
+                      `شكراً لتعاملكم معنا في مول الصعيدي! 🙏`;
+
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
+      });
+
+      // مشاركة واتساب (صورة باستخدام html2canvas)
+      $("shareWhatsAppImage").addEventListener("click", () => {
+        const receiptElement = $("receiptContent");
+        html2canvas(receiptElement, { scale: 2 }).then(canvas => {
+          canvas.toBlob(blob => {
+            let file = new File([blob], "invoice.png", { type: "image/png" });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              navigator.share({
+                files: [file],
+                title: 'فاتورة مول الصعيدي',
+                text: 'تفاصيل الفاتورة من مول الصعيدي'
+              }).catch(err => console.log('خطأ في المشاركة:', err));
+            } else {
+              let link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = 'Invoice_Saidi_Mall.png';
+              link.click();
+              alert("تم حفظ الفاتورة كصورة على جهازك، يمكنك إرسالها الآن عبر واتساب!");
+              window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("إليك فاتورة مبيعات مول الصعيدي:")}`, '_blank');
+            }
+          });
+        });
+      });
+    }
+
+    async function completeSale() {
+      if (!cart.length) {
+        alert("السلة فارغة.");
+        return;
+      }
+
+      const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const discount = Number($("discount").value) || 0;
+      const total = subtotal - discount;
+      const paidInput = $("paid").value.trim();
+      const paid = paidInput === "" ? total : Number(paidInput);
+
+      if (discount < 0 || discount > subtotal || !Number.isFinite(paid) || paid < 0) {
+        alert("تحقق من الخصم والمبلغ المدفوع.");
+        return;
+      }
+
+      for (const item of cart) {
+        const currentProduct = products.find(product => product.id === item.id);
+        if (!currentProduct || currentProduct.stock < item.quantity) {
+          alert(`المخزون غير كافٍ للمنتج: ${item.name}`);
+          return;
+        }
+      }
+
+      const invoice = {
+        id: "INV_" + Math.random().toString(36).substr(2, 6).toUpperCase(),
+        date: new Date().toISOString(),
+        customerName: $("customerName").value.trim() || "عميل نقدي",
+        customerPhone: $("customerPhone").value.trim() || "بدون هاتف",
+        items: cart.map(item => ({ ...item })),
+        subtotal,
+        discount,
+        total,
+        paid,
+        remaining: total - paid
+      };
+
+      try {
+        // حفظ الفاتورة سحابياً
+        await db.collection("invoices").doc(invoice.id).set(invoice);
+
+        // تحديث المخزون سحابياً لكل صنف
+        for (const item of cart) {
+          const productRef = db.collection("products").doc(item.id);
+          const doc = await productRef.get();
+          if (doc.exists) {
+            const currentStock = doc.data().stock || 0;
+            const updatedStock = Math.max(0, currentStock - item.quantity);
+            await productRef.update({ stock: updatedStock });
+          }
+        }
+
+        // تحديث البيانات محلياً بعد نجاح السحابة
+        products = products.map(product => {
+          const sold = cart.find(item => item.id === product.id);
+          return sold ? { ...product, stock: product.stock - sold.quantity } : product;
+        });
+        invoices.push(invoice);
+
+      } catch (error) {
+        console.error(error);
+        alert("تعذر إتمام وحفظ البيع سحابياً. تأكد من اتصال الإنترنت.");
+        return;
+      }
+
+      cart = [];
+      $("discount").value = "0";
+      $("paid").value = "";
+      $("customerName").value = "";
+      $("customerPhone").value = "";
+
+      renderAll();
+      showReceipt(invoice);
+    }
+
+    function renderAll() {
+      renderSearch();
+      renderCart();
+      renderProducts();
+      renderInvoices();
+    }
+
+    function downloadCsv(filename, rows) {
+      const csv = "\uFEFF" + rows.map(row =>
+        row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
+      ).join("\r\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    $("productForm").addEventListener("submit", async event => {
+      event.preventDefault();
+
+      const name = $("productName").value.trim();
+      const price = Number($("productPrice").value);
+      const stock = Number($("productStock").value);
+      const barcode = $("productBarcode").value.trim();
+
+      if (!name || !Number.isFinite(price) || price < 0 ||
+          !Number.isInteger(stock) || stock < 0) {
+        alert("أدخل اسمًا وسعرًا وكمية صحيحة.");
+        return;
+      }
+
+      if (barcode && products.some(product => product.barcode === barcode)) {
+        alert("هذا الباركود مسجل لمنتج آخر.");
+        return;
+      }
+
+      const newProduct = {
+        id: "PRD_" + Math.random().toString(36).substr(2, 6).toUpperCase(),
+        name,
+        price,
+        stock,
+        barcode
+      };
+
+      try {
+        await db.collection("products").doc(newProduct.id).set(newProduct);
+        products.push(newProduct);
+        event.target.reset();
+        renderAll();
+        alert("تم إضافة المنتج بنجاح إلى السحابة.");
+      } catch (error) {
+        console.error(error);
+        alert("تعذر حفظ المنتج سحابياً.");
+      }
     });
-}
+
+    $("searchResults").addEventListener("click", event => {
+      const button = event.target.closest("[data-add]");
+      if (button) addToCart(button.dataset.add);
+    });
+
+    $("cartList").addEventListener("click", event => {
+      const button = event.target.closest("button");
+      if (!button) return;
+
+      const item = cart.find(product => product.id ===
+        (button.dataset.plus || button.dataset.minus || button.dataset.remove));
+      if (!item) return;
+
+      if (button.dataset.plus) {
+        const product = products.find(product => product.id === item.id);
+        if (item.quantity < product.stock) item.quantity += 1;
+        else alert("لا توجد كمية إضافية في المخزون.");
+      } else if (button.dataset.minus) {
+        item.quantity -= 1;
+        if (item.quantity <= 0) cart = cart.filter(product => product.id !== item.id);
+      } else {
+        cart = cart.filter(product => product.id !== item.id);
+      }
+
+      renderCart();
+    });
+
+    $("productsList").addEventListener("click", async event => {
+      const button = event.target.closest("[data-delete-product]");
+      if (!button) return;
+
+      const product = products.find(item => item.id === button.dataset.deleteProduct);
+      if (!product || !confirm(`حذف المنتج "${product.name}"؟`)) return;
+
+      try {
+        await db.collection("products").doc(product.id).delete();
+        products = products.filter(item => item.id !== product.id);
+        cart = cart.filter(item => item.id !== product.id);
+        renderAll();
+      } catch (error) {
+        console.error(error);
+        alert("تعذر حذف المنتج من السحابة.");
+      }
+    });
+
+    $("invoicesList").addEventListener("click", event => {
+      const button = event.target.closest("[data-print]");
+      if (!button) return;
+      const invoice = invoices.find(item => item.id === button.dataset.print);
+      if (invoice) showReceipt(invoice);
+    });
+
+    document.querySelectorAll(".tab").forEach(button => {
+      button.addEventListener("click", () => showView(button.dataset.view));
+    });
+
+    $("productSearch").addEventListener("input", renderSearch);
+    $("discount").addEventListener("input", renderCart);
+    $("completeSale").addEventListener("click", completeSale);
+
+    $("exportProducts").addEventListener("click", () => {
+      downloadCsv("saidimall-products.csv", [
+        ["الاسم", "السعر", "المخزون", "الباركود"],
+        ...products.map(item => [item.name, item.price, item.stock, item.barcode])
+      ]);
+    });
+
+    // تصدير الفواتير CSV مفصل لكل صنف داخلي
+    $("exportInvoices").addEventListener("click", () => {
+      let rows = [["رقم الفاتورة", "التاريخ", "اسم العميل", "رقم الهاتف", "الصنف", "الكمية", "سعر القطعة", "إجمالي الصنف", "إجمالي الفاتورة"]];
+      invoices.forEach(inv => {
+        if (inv.items && inv.items.length > 0) {
+          inv.items.forEach(item => {
+            rows.push([
+              inv.id,
+              new Date(inv.date).toLocaleString("ar-EG"),
+              inv.customerName,
+              inv.customerPhone,
+              item.name,
+              item.quantity,
+              item.price,
+              item.quantity * item.price,
+              inv.total
+            ]);
+          });
+        }
+      });
+      downloadCsv("saidimall-detailed-invoices.csv", rows);
+    });
+
+    // جلب البيانات من سحابة Firestore عند بدء التشغيل
+    async function startCloudSync() {
+      try {
+        const prodSnap = await db.collection("products").get();
+        products = prodSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const invSnap = await db.collection("invoices").get();
+        invoices = invSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        $("cloudStatus").textContent = "🟢 متصل بالسحابة بنجاح (المنتجات: " + products.length + " | الفواتير: " + invoices.length + ")";
+        renderAll();
+      } catch (error) {
+        console.error(error);
+        $("cloudStatus").textContent = "🔴 فشل الاتصال بالسحابة - تحقق من قواعد الأمان Rules في فايربيس";
+        $("cloudStatus").style.background = "#fff0ef";
+        $("cloudStatus").style.color = "#b42318";
+      }
+    }
+
+    startCloudSync();
+  </script>
+</body>
+</html>
