@@ -1,10 +1,12 @@
+عذراً يا غالي، يبدو أن الكود الأخير لم يظهر أو سقط منك سهواً في الرسالة السابقة.
+إليك الكود المتكامل والمحدث بالكامل لمول الصعيدي، وفيه تم اعتماد شكل الفاتورة الرسمي والمنظم جداً الذي طلبته (بالجدول المرتب: الصنف، الكمية، السعر، الإجمالي، وتفاصيل العميل، وسياسة الاستبدال والاسترجاع)، بالإضافة إلى تشغيل الكاميرا على الباركود الخطي، وإدارة المصاريف، وتقرير الواتساب المرقم:
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#176b52">
-  <title>مول الصعيدي | الكاشير والمخزن والمصاريف</title>
+  <title>مول الصعيدي | ملابس أطفال وكماليات</title>
 
   <!-- مكتبة html2canvas لمشاركة الفاتورة كصورة -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -153,7 +155,7 @@
     @media print {
       body { background: white; }
       header, .tabs, .no-print, main > section:not(#receipt) { display: none !important; }
-      #receipt { display: block !important; border: 0; width: 100%; padding: 0; box-shadow: none; }
+      #receipt { display: block !important; border: 0; width: 100%; padding: 0; box-shadow: none; font-size: 14px; }
     }
   </style>
 </head>
@@ -161,7 +163,7 @@
 <body>
   <header>
     <h1>مول الصعيدي</h1>
-    <p>نظام الكاشير والمخزن والمصاريف المحلي السريع</p>
+    <p>ملابس أطفال وكماليات — نظام الكاشير والمخزن والمصاريف</p>
   </header>
 
   <main>
@@ -346,7 +348,7 @@
       </div>
     </section>
 
-    <!-- الفاتورة والطباعة المخصصة -->
+    <!-- الفاتورة الرسمية المطابقة لطلبك -->
     <section id="receipt" class="panel hidden"></section>
   </main>
 
@@ -579,7 +581,7 @@
       const item = cart.find(i => i.id === id);
       const p = products.find(item => item.id === id);
       if(!item) return;
-      if(delta > 0 && item.quantity >= p.stock) return alert("المخزن لا يكفي!");
+      if(delta > 0 && item.quantity >= p.stock) return alert("المخزون لا يكفي!");
       item.quantity += delta;
       if(item.quantity <= 0) cart = cart.filter(i => i.id !== id);
       renderCart();
@@ -656,37 +658,66 @@
       }
     };
 
-    // تصميم الإيصال الجديد (مرتب وواضح: الاسم - العدد - الإجمالي)
+    // تصميم الفاتورة الرسمي المطابق لطلبك تماماً
     function showReceipt(inv) {
-      const lines = inv.items.map((i, idx) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin:6px 0; font-size:13px; border-bottom:1px dotted #eee; padding-bottom:4px;">
-          <span>${idx + 1}. ${escapeHtml(i.name)}</span>
-          <span style="color:#666; font-size:12px;">(عدد: ${i.quantity})</span>
-          <strong style="white-space:nowrap;">${money(i.price * i.quantity)}</strong>
-        </div>
+      const totalPieces = inv.items.reduce((s, i) => s + i.quantity, 0);
+      const d = new Date(inv.date);
+      const dateStr = d.toLocaleDateString("ar-EG");
+      const timeStr = d.toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' });
+
+      const tableRows = inv.items.map(i => `
+        <tr>
+          <td style="padding:4px 0; border-bottom:1px dashed #eee;">${escapeHtml(i.name)}</td>
+          <td style="text-align:center; padding:4px 0; border-bottom:1px dashed #eee;">${i.quantity}</td>
+          <td style="text-align:center; padding:4px 0; border-bottom:1px dashed #eee;">${Number(i.price).toFixed(2)}</td>
+          <td style="text-align:left; padding:4px 0; border-bottom:1px dashed #eee;">${Number(i.price * i.quantity).toFixed(2)} ج</td>
+        </tr>
       `).join("");
 
       $("receipt").innerHTML = `
-        <div id="receiptContent" style="background:#fff; padding:20px; border-radius:10px; max-width:400px; margin:0 auto;">
-          <h2 style="text-align:center; margin:0 0 5px 0;">🛒 مول الصعيدي</h2>
-          <div style="text-align:center; font-size:12px;" class="muted">إيصال مبيعات</div>
-          <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
-          <p style="margin:4px 0; font-size:13px;"><strong>رقم الفاتورة:</strong> ${escapeHtml(inv.id)}</p>
-          <p style="margin:4px 0; font-size:13px;"><strong>التاريخ:</strong> ${new Date(inv.date).toLocaleString("ar-EG")}</p>
-          <p style="margin:4px 0; font-size:13px;"><strong>العميل:</strong> ${escapeHtml(inv.customerName)}</p>
-          <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
-          <div style="font-weight:600; margin-bottom:5px; font-size:13px;">الأصناف (الاسم — العدد — الإجمالي):</div>
-          ${lines}
-          <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
-          <div class="summary-line"><span>الإجمالي:</span><strong>${money(inv.subtotal)}</strong></div>
-          ${inv.discount > 0 ? `<div class="summary-line"><span>الخصم:</span><strong>${money(inv.discount)}</strong></div>` : ''}
-          <div class="summary-line" style="font-size:15px;"><span>الصافي المطلوب:</span><strong>${money(inv.total)}</strong></div>
-          <div class="summary-line"><span>المدفوع:</span><strong>${money(inv.paid)}</strong></div>
-          <div class="summary-line"><span>المتبقي:</span><strong>${money(inv.remaining)}</strong></div>
-          <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
-          <div style="text-align:center; font-size:11px; color:#555; line-height:1.4;">
-            سياسة الاستبدال خلال 7 أيام والاسترجاع خلال 3 أيام برمز الفاتورة.<br>
-            شكراً لتعاملكم معنا في مول الصعيدي 🙏
+        <div id="receiptContent" style="background:#fff; padding:20px; border-radius:10px; max-width:420px; margin:0 auto; font-family:monospace; line-height:1.5;">
+          <div style="text-align:center;">
+            <h2 style="margin:0; font-size:20px; font-weight:bold;">مول الصعيدي</h2>
+            <div style="font-size:13px; color:#555;">ملابس أطفال وكماليات</div>
+          </div>
+          <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+          <div style="font-size:13px;">
+            <div><strong>رقم الفاتورة:</strong> ${escapeHtml(inv.id)}</div>
+            <div><strong>التاريخ:</strong> ${dateStr} &nbsp;&nbsp; <strong>الساعة:</strong> ${timeStr}</div>
+            <div><strong>اسم العميل:</strong> ${escapeHtml(inv.customerName)}</div>
+            <div><strong>رقم الهاتف:</strong> ${escapeHtml(inv.customerPhone)}</div>
+          </div>
+          <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+          
+          <table style="width:100%; font-size:12px; border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid #333;">
+                <th style="text-align:right; padding-bottom:4px;">الصنف</th>
+                <th style="text-align:center; padding-bottom:4px;">الكمية</th>
+                <th style="text-align:center; padding-bottom:4px;">السعر</th>
+                <th style="text-align:left; padding-bottom:4px;">الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+          
+          <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+          <div style="font-size:13px;">
+            <div style="display:flex; justify-content:space-between;"><span>عدد القطع:</span> <strong>${totalPieces}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>الإجمالي:</span> <strong>${money(inv.subtotal)}</strong></div>
+            ${inv.discount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>الخصم:</span> <strong>${money(inv.discount)}</strong></div>` : ''}
+            <div style="display:flex; justify-content:space-between; font-size:15px; margin-top:4px;"><span>المطلوب:</span> <strong>${money(inv.total)}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>المدفوع:</span> <strong>${money(inv.paid)}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>المتبقي:</span> <strong>${money(inv.remaining)}</strong></div>
+          </div>
+          <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+          <div style="font-size:11px; text-align:center; color:#444; line-height:1.4;">
+            <strong>سياسة الاستبدال والاسترجاع:</strong><br>
+            الاستبدال خلال 7 أيام، والاسترجاع خلال 3 أيام<br>
+            بشرط وجود الفاتورة وبقاء المنتج بحالته الأصلية.<br><br>
+            <strong>شكرًا لتسوقكم من مول الصعيدي 🙏</strong>
           </div>
         </div>
         <div class="actions no-print" style="margin-top:12px; display:flex; justify-content:center; gap:8px;">
@@ -768,7 +799,6 @@
       `).join("") : `<div class="empty">لا توجد مبالغ آجلة.</div>`;
     }
 
-    // تصميم تقرير الواتساب اليومي الجديد (مرقم: الاسم - العدد - الإجمالي)
     window.sendDailyReportWhatsApp = function() {
       const totalSales = invoices.reduce((s, i) => s + i.total, 0);
       const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
@@ -822,7 +852,7 @@
     $("exportProducts").addEventListener("click", () => {
       let csv = "\uFEFFاسم الصنف,السعر,المخزن,الباركود\n";
       products.forEach(p => { csv += `"${p.name}",${p.price},${p.stock},"${p.barcode || ''}"\n`; });
-      let blob = new Blob([csv], { type: "text/csv;charset=ustf-8" });
+      let blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Inventory_${new Date().toISOString().slice(0,10)}.csv`; a.click();
     });
 
@@ -842,3 +872,4 @@
   </script>
 </body>
 </html>
+
