@@ -272,23 +272,29 @@
       </div>
 
       <div class="panel">
-        <div class="row">
-          <h2>قائمة أصناف المخزن</h2>
-          <button id="exportProducts" class="secondary">تصدير المخزن CSV</button>
-        </div>
+        <h2>قائمة أصناف المخزن</h2>
         <div id="productsList" class="product-list"></div>
       </div>
     </section>
 
-    <!-- شاشة الفواتير والبحث -->
+    <!-- شاشة الفواتير والبحث وفلترة الأيام -->
     <section id="invoicesView" class="view hidden">
       <div class="panel">
-        <div class="row">
-          <h2>سجل الفواتير والبحث</h2>
-          <button id="exportInvoices" class="secondary">تصدير الفواتير CSV</button>
+        <h2>سجل الفواتير حسب اليوم والبحث</h2>
+        <div class="form-grid" style="margin-bottom:10px;">
+          <div class="field">
+            <label for="filterDate">عرض فواتير يوم:</label>
+            <input id="filterDate" type="date" onchange="renderInvoices()">
+          </div>
+          <div class="field" style="display:flex; align-items:flex-end;">
+            <button class="secondary" style="width:100%;" onclick="clearDateFilter()">عرض كل الأيام</button>
+          </div>
         </div>
         <div class="field full" style="margin-bottom:10px;">
           <input id="invoiceSearch" autocomplete="off" placeholder="🔍 ابحث برقم الفاتورة، اسم العميل، رقم الهاتف، أو اسم الصنف..." oninput="renderInvoices()">
+        </div>
+        <div class="actions" style="margin-bottom:12px;">
+          <button class="primary" onclick="shareDayInvoicesImage()">📱 مشاركة فواتير اليوم المحدد كصورة واتساب</button>
         </div>
         <div id="invoicesList" class="invoice-list"></div>
       </div>
@@ -386,6 +392,19 @@
       </div>
     </section>
 
+    <!-- عنصر مخفي لتوليد صورة فواتير اليوم المحدد -->
+    <div id="printableDayInvoicesCard" style="display:none; background:#fff; padding:20px; width:450px; font-family:monospace; direction:rtl;">
+      <div style="text-align:center;">
+        <h2 style="margin:0; font-size:22px;">مول الصعيدي</h2>
+        <div style="font-size:13px; color:#555;">ملخص فواتير يوم</div>
+        <div id="imgDayTitle" style="font-size:14px; margin-top:4px; font-weight:bold;"></div>
+      </div>
+      <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+      <div style="font-size:12px;" id="imgDayInvoicesContent"></div>
+      <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+      <div style="text-align:center; font-size:11px; color:#555;">مول الصعيدي للإدارة والتحكم 🙏</div>
+    </div>
+
     <!-- الفاتورة الرسمية -->
     <section id="receipt" class="panel hidden"></section>
   </main>
@@ -418,7 +437,10 @@
         else renderReports();
       }
       if(viewId === "expensesView") renderExpenses();
-      if(viewId === "invoicesView") renderInvoices();
+      if(viewId === "invoicesView") {
+        if(!$("filterDate").value) $("filterDate").value = new Date().toISOString().slice(0, 10);
+        renderInvoices();
+      }
     }
 
     function exportBackup() {
@@ -666,11 +688,23 @@
       showReceipt(invoice);
     });
 
-    // --- نظام البحث الذكي في الفواتير ---
+    // --- نظام الفواتير والفلترة باليوم والبحث ---
+    window.clearDateFilter = function() {
+      $("filterDate").value = "";
+      renderInvoices();
+    };
+
     function renderInvoices() {
       const q = $("invoiceSearch") ? $("invoiceSearch").value.trim().toLowerCase() : "";
-      
+      const dateVal = $("filterDate") ? $("filterDate").value : "";
+
       const filtered = invoices.filter(inv => {
+        // فلترة التاريخ
+        if(dateVal) {
+          const invDateStr = inv.date.slice(0, 10);
+          if(invDateStr !== dateVal) return false;
+        }
+        // فلترة البحث
         if(!q) return true;
         const matchId = inv.id.toLowerCase().includes(q);
         const matchName = inv.customerName.toLowerCase().includes(q);
@@ -691,7 +725,7 @@
             <button class="danger" onclick="deleteInvoice('${inv.id}')">حذف</button>
           </div>
         </div>
-      `).join("") : `<div class="empty">لا توجد فواتير مطابقة للبحث.</div>`;
+      `).join("") : `<div class="empty">لا توجد فواتير مطابقة لخيارات البحث أو التاريخ.</div>`;
     }
 
     window.viewInvoice = function(id) {
@@ -797,6 +831,46 @@
       });
     };
 
+    // مشاركة فواتير اليوم المحدد كصورة واتساب
+    window.shareDayInvoicesImage = function() {
+      const dateVal = $("filterDate").value;
+      if(!dateVal) return alert("برجاء تحديد يوم معين أولاً لعرض ومشاركة فواتيره!");
+
+      const dayInvoices = invoices.filter(inv => inv.date.slice(0, 10) === dateVal);
+      if(!dayInvoices.length) return alert("لا توجد فواتير مسجلة في هذا اليوم.");
+
+      $("imgDayTitle").textContent = `تاريخ اليوم: ${dateVal}`;
+      let contentHtml = `<b>إجمالي الفواتير: ${dayInvoices.length}</b><br><br>`;
+      
+      let totalDaySales = 0;
+      dayInvoices.forEach((inv, i) => {
+        totalDaySales += inv.total;
+        contentHtml += `<b>${i+1}. فاتورة: ${inv.id}</b> (${inv.customerName})<br>`;
+        inv.items.forEach(item => {
+          contentHtml += ` &nbsp;&nbsp;▪️ ${escapeHtml(item.name)} (x${item.quantity}) — ${money(item.price * item.quantity)}<br>`;
+        });
+        contentHtml += ` &nbsp;&nbsp;<b>المجموع: ${money(inv.total)}</b><br><hr style="border:0; border-top:1px dashed #ddd; margin:6px 0;">`;
+      });
+      contentHtml += `<br><div style="font-size:14px; text-align:center;"><b>إجمالي مبيعات اليوم: ${money(totalDaySales)}</b></div>`;
+      
+      $("imgDayInvoicesContent").innerHTML = contentHtml;
+
+      const card = $("printableDayInvoicesCard");
+      card.style.display = "block";
+      html2canvas(card, { scale: 2 }).then(canvas => {
+        card.style.display = "none";
+        canvas.toBlob(blob => {
+          let file = new File([blob], "day_invoices.png", { type: "image/png" });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: 'فواتير يوم مول الصعيدي' });
+          } else {
+            let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Invoices_${dateVal}.png`; a.click();
+            alert("تم حفظ صورة فواتير اليوم على جهازك، يمكنك إرسالها الآن عبر واتساب.");
+          }
+        });
+      });
+    };
+
     $("expenseForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const title = $("expenseTitle").value.trim();
@@ -886,7 +960,6 @@
         </div>
       `).join("") : `<div class="empty">لا توجد فواتير في هذه الفترة.</div>`;
 
-      // تجهيز بيانات كارت الصورة للواتساب
       $("repRangeText").textContent = `الفترة: ${startStr || 'البداية'} إلى ${endStr || 'الآن'}`;
       $("imgRepSales").textContent = money(totalSales);
       $("imgRepExp").textContent = money(totalExpenses);
@@ -906,7 +979,6 @@
       $("imgRepItemsList").innerHTML = itemsHtml;
     }
 
-    // مشاركة تقرير الفترة كصورة واتساب
     window.shareReportImage = function() {
       const card = $("printableReportCard");
       card.style.display = "block";
@@ -923,17 +995,6 @@
         });
       });
     };
-
-    $("exportInvoices").addEventListener("click", () => {
-      let csv = "\uFEFFرقم الفاتورة,التاريخ,اسم العميل,رقم الهاتف,الصنف,الكمية,سعر القطعة,إجمالي الصنف,إجمالي الفاتورة\n";
-      invoices.forEach(inv => {
-        inv.items.forEach(item => {
-          csv += `"${inv.id}","${new Date(inv.date).toLocaleString('en-GB')}","${inv.customerName}","${inv.customerPhone}","${item.name}",${item.quantity},${item.price},${item.quantity * item.price},${inv.total}\n`;
-        });
-      });
-      let blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Invoices_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-    });
 
     $("exportProducts").addEventListener("click", () => {
       let csv = "\uFEFFاسم الصنف,السعر,المخزن,الباركود\n";
