@@ -11,7 +11,7 @@
   <!-- مكتبة ماسح الباركود باستخدام كاميرا الموبايل -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
-  <!-- مكتبات Firebase السحابية (الإصدار المتوافق مع الكود) -->
+  <!-- مكتبات Firebase السحابية -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
@@ -170,7 +170,7 @@
 
   <main>
     <div id="cloudStatus" style="padding: 6px 10px; margin-bottom: 10px; background: #e6ece8; border-radius: 6px; font-size: 12px; text-align: center;">
-      جاري الاتصال بقاعدة البيانات السحابية (Firebase)...
+      جاري الاتصال بقاعدة البيانات السحابية والمزامنة الفورية...
     </div>
 
     <nav class="tabs no-print">
@@ -236,8 +236,9 @@
     <!-- شاشة المخزن -->
     <section id="productsView" class="view hidden">
       <div class="panel">
-        <h2>إضافة صنف جديد للمخزن السحابي</h2>
+        <h2 id="productFormTitle">إضافة صنف جديد للمخزن السحابي</h2>
         <form id="productForm" class="form-grid">
+          <input type="hidden" id="editingProductId">
           <div class="field">
             <label for="productName">اسم الصنف / المنتج</label>
             <input id="productName" required placeholder="مثال: طقم أطفال 3 قطعة">
@@ -262,7 +263,8 @@
             <button type="button" class="danger" id="btnCloseScannerProduct" style="width:100%; margin-top:5px;">إغلاق الكاميرا</button>
           </div>
           <div class="actions full">
-            <button class="primary" type="submit">💾 حفظ الصنف سحابياً</button>
+            <button class="primary" type="submit" id="saveProductBtn">💾 حفظ الصنف سحابياً</button>
+            <button type="button" id="cancelEditBtn" class="secondary hidden" onclick="cancelEditProduct()">إلغاء التعديل</button>
           </div>
         </form>
       </div>
@@ -321,7 +323,6 @@
   <script>
     "use strict";
 
-    // إعدادات مشروعك الحقيقي على Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyB9EWlvR5e72lZqF_a0pneOUrJ1_H3ryMA",
       authDomain: "alsaeedy-mall.firebaseapp.com",
@@ -355,25 +356,29 @@
       if(viewId === "reportsView") renderReports();
     }
 
-    // جلب البيانات من السحابة مباشرة عند البدء
-    async function fetchCloudData() {
+    // الاستماع الفوري للتغييرات من قاعدة البيانات (Real-time listener) لمنع الحاجة للريفرش
+    function initRealtimeSync() {
       if (!db) {
         $("cloudStatus").textContent = "🔴 فشل الاتصال بقاعدة البيانات السحابية";
         return;
       }
-      try {
-        const prodSnap = await db.collection("products").get();
-        products = prodSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const invSnap = await db.collection("invoices").get();
-        invoices = invSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+      // جلب ومتابعة تحديثات المنتجات فوريًا
+      db.collection("products").onSnapshot(snapshot => {
+        products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderAll();
-        $("cloudStatus").textContent = "🟢 متصل بقاعدة بيانات سحابية بنجاح (المنتجات: " + products.length + " | الفواتير: " + invoices.length + ")";
-      } catch (err) {
-        console.error("خطأ في جلب البيانات:", err);
-        $("cloudStatus").textContent = "🔴 خطأ في الاتصال بقاعدة البيانات - تأكد من Rules";
-      }
+        $("cloudStatus").textContent = "🟢 متصل بالسحابة بنجاح (تحديث فوري نشط) | الأصناف: " + products.length + " | الفواتير: " + invoices.length;
+      }, err => {
+        console.error("خطأ في مزامنة المنتجات:", err);
+      });
+
+      // جلب ومتابعة تحديثات الفواتير فوريًا
+      db.collection("invoices").onSnapshot(snapshot => {
+        invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderAll();
+      }, err => {
+        console.error("خطأ في مزامنة الفواتير:", err);
+      });
     }
 
     // --- تشغيل الكاميرا للبحث ---
@@ -480,9 +485,10 @@
       renderCart();
     };
 
-    // --- إضافة منتج سحابياً ---
+    // --- إضافة أو تحديث منتج بالمخزن سحابياً ---
     $("productForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const editingId = $("editingProductId").value;
       const name = $("productName").value.trim();
       const price = Number($("productPrice").value);
       const stock = Number($("productStock").value);
@@ -490,19 +496,24 @@
 
       if (!name || price < 0 || stock < 0) return alert("يرجى إدخال بيانات صحيحة.");
 
-      const newProduct = {
-        id: "PRD_" + Date.now().toString(36),
-        name, price, stock, barcode
-      };
-
       try {
-        if(db) await db.collection("products").doc(newProduct.id).set(newProduct);
-        products.push(newProduct);
-        renderAll();
-        e.target.reset();
-        alert("✅ تم حفظ الصنف بالمخزن السحابي بنجاح!");
-      } catch(err) {
-        alert("❌ تعذر الحفظ بالسحابة: " + err.message);
+        if (editingId) {
+          // تحديث صنف موجود
+          if(db) await db.collection("products").doc(editingId).update({ name, price, stock, barcode });
+          alert("✅ تم تحديث بيانات الصنف بنجاح!");
+          cancelEditProduct();
+        } else {
+          // إضافة صنف جديد
+          const newProduct = {
+            id: "PRD_" + Date.now().toString(36),
+            name, price, stock, barcode
+          };
+          if(db) await db.collection("products").doc(newProduct.id).set(newProduct);
+          alert("✅ تم حفظ الصنف بالمخزن السحابي بنجاح!");
+          e.target.reset();
+        }
+      } function(err) {} catch(err) {
+        alert("❌ تعذر حفظ أو تحديث الصنف: " + err.message);
       }
     });
 
@@ -513,17 +524,41 @@
             <div class="item-title">${escapeHtml(p.name)}</div>
             <div class="muted">السعر: ${money(p.price)} | الكمية بالمخزن: <strong>${p.stock}</strong> ${p.barcode ? ' | باركود: ' + escapeHtml(p.barcode) : ''}</div>
           </div>
-          <button class="danger" onclick="deleteProduct('${p.id}')">حذف</button>
+          <div style="display:flex; gap:4px;">
+            <button class="small-button" onclick="editProduct('${p.id}')">✏️ تعديل</button>
+            <button class="danger" onclick="deleteProduct('${p.id}')">حذف</button>
+          </div>
         </div>
       `).join("") : `<div class="empty">لا توجد أصناف بالمخزن.</div>`;
     }
+
+    // تعبئة نموذج التعديل ببيانات الصنف
+    window.editProduct = function(id) {
+      const p = products.find(item => item.id === id);
+      if(!p) return;
+      $("editingProductId").value = p.id;
+      $("productName").value = p.name;
+      $("productPrice").value = p.price;
+      $("productStock").value = p.stock;
+      $("productBarcode").value = p.barcode || "";
+      $("productFormTitle").textContent = "تعديل بيانات الصنف: " + p.name;
+      $("saveProductBtn").textContent = "💾 تحديث الصنف";
+      $("cancelEditBtn").classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.cancelEditProduct = function() {
+      $("editingProductId").value = "";
+      $("productForm").reset();
+      $("productFormTitle").textContent = "إضافة صنف جديد للمخزن السحابي";
+      $("saveProductBtn").textContent = "💾 حفظ الصنف سحابياً";
+      $("cancelEditBtn").classList.add("hidden");
+    };
 
     window.deleteProduct = async function(id) {
       if(!confirm("هل أنت متأكد من حذف الصنف من السحابة؟")) return;
       try {
         if(db) await db.collection("products").doc(id).delete();
-        products = products.filter(p => p.id !== id);
-        renderAll();
       } catch(e) {
         alert("❌ تعذر الحذف من السحابة.");
       }
@@ -555,14 +590,11 @@
           for (let cItem of cart) {
             const p = products.find(prod => prod.id === cItem.id);
             if (p) {
-              p.stock = Math.max(0, p.stock - cItem.quantity);
-              await db.collection("products").doc(p.id).update({ stock: p.stock });
+              let updatedStock = Math.max(0, p.stock - cItem.quantity);
+              await db.collection("products").doc(p.id).update({ stock: updatedStock });
             }
           }
         }
-
-        invoices.push(invoice);
-        renderAll();
 
         cart = [];
         $("discount").value = "0";
@@ -571,7 +603,7 @@
         $("customerPhone").value = "";
 
         showReceipt(invoice);
-        alert("✅ تم إتمام الفاتورة وحفظها سحابياً وتحديث المخزون بنجاح!");
+        alert("✅ تم إتمام الفاتورة وحفظها سحابياً وتحديث المخزن بنجاح!");
       } catch(err) {
         alert("❌ حدث خطأ أثناء الحفظ بالسحابة: " + err.message);
       }
@@ -611,14 +643,11 @@
             for (let item of inv.items) {
               const p = products.find(prod => prod.id === item.id);
               if(p) {
-                p.stock += item.quantity;
-                await db.collection("products").doc(item.id).update({ stock: p.stock });
+                let restoredStock = p.stock + item.quantity;
+                await db.collection("products").doc(item.id).update({ stock: restoredStock });
               }
             }
           }
-
-          invoices = invoices.filter(i => i.id !== id);
-          renderAll();
           alert("✅ تم حذف الفاتورة وإعادة الكميات للمخزن السحابي بنجاح!");
         } catch(e) {
           alert("❌ تعذر حذف الفاتورة من السحابة.");
@@ -630,9 +659,12 @@
       const inv = invoices.find(i => i.id === id);
       if(!inv) return;
       if(confirm("سيتم نقل محتويات الفاتورة إلى شاشة الكاشير لتعديلها. هل تريد المتابعة؟")) {
-        inv.items.forEach(item => {
+        // إرجاع الكميات مؤقتا للمخزن
+        inv.items.forEach(async (item) => {
           const p = products.find(prod => prod.id === item.id);
-          if(p) p.stock += item.quantity;
+          if(p && db) {
+            await db.collection("products").doc(item.id).update({ stock: p.stock + item.quantity });
+          }
         });
 
         cart = [...inv.items];
@@ -641,7 +673,7 @@
         $("discount").value = inv.discount;
         $("paid").value = inv.paid;
 
-        deleteInvoice(id); // حذفها مؤقتاً لحين إعادة حفظها بالتعديلات
+        if(db) db.collection("invoices").doc(id).delete(); // حذف الفاتورة القديمة
         showView("saleView");
         renderCart();
       }
@@ -759,8 +791,8 @@
     $("productSearch").addEventListener("input", renderSearch);
     $("discount").addEventListener("input", renderCart);
 
-    // بدء الاتصال السحابي عند تشغيل الصفحة
-    fetchCloudData();
+    // تفعيل المزامنة الفورية السحابية
+    initRealtimeSync();
   </script>
 </body>
 </html>
