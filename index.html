@@ -4,16 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#176b52">
-  <title>مول الصعيدي | الكاشير والمخزن السحابي</title>
+  <title>مول الصعيدي | الكاشير والمخزن والمصاريف</title>
 
   <!-- مكتبة html2canvas لمشاركة الفاتورة كصورة -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <!-- مكتبة ماسح الباركود باستخدام كاميرا الموبايل -->
   <script src="https://unpkg.com/html5-qrcode"></script>
-
-  <!-- مكتبات Firebase السحابية -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <style>
     :root {
@@ -58,7 +54,7 @@
       overflow-x: auto;
     }
 
-    button, input { font: inherit; }
+    button, input, select { font: inherit; }
 
     .tab, .primary, .secondary, .danger, .small-button {
       border: 0;
@@ -103,7 +99,7 @@
 
     label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--muted); }
 
-    input {
+    input, select {
       width: 100%;
       padding: 10px;
       border: 1px solid var(--border);
@@ -165,19 +161,25 @@
 <body>
   <header>
     <h1>مول الصعيدي</h1>
-    <p>نظام الكاشير والمخزن السحابي المباشر</p>
+    <p>نظام الكاشير والمخزن والمصاريف المحلي السريع</p>
   </header>
 
   <main>
-    <div id="cloudStatus" style="padding: 6px 10px; margin-bottom: 10px; background: #e6ece8; border-radius: 6px; font-size: 12px; text-align: center;">
-      جاري الاتصال بقاعدة البيانات السحابية والمزامنة الفورية...
+    <div id="systemStatus" style="padding: 6px 10px; margin-bottom: 10px; background: #e6ece8; border-radius: 6px; font-size: 12px; display:flex; justify-content:space-between; align-items:center;">
+      <span>🟢 النظام المحلي يعمل بكفاءة تامة</span>
+      <div>
+        <button class="small-button" onclick="exportBackup()">📥 تصدير نسخة احتياطية</button>
+        <button class="small-button" onclick="$('importFile').click()">📤 استعادة نسخة</button>
+        <input type="file" id="importFile" class="hidden" accept=".json" onchange="importBackup(event)">
+      </div>
     </div>
 
     <nav class="tabs no-print">
       <button class="tab active" data-view="saleView">🛒 الكاشير</button>
       <button class="tab" data-view="productsView">📦 المخزن</button>
       <button class="tab" data-view="invoicesView">📄 الفواتير</button>
-      <button class="tab" data-view="reportsView">📊 كشف الحساب والتقارير</button>
+      <button class="tab" data-view="expensesView">💸 المصاريف</button>
+      <button class="tab" data-view="reportsView">📊 تقارير اليوم</button>
     </nav>
 
     <!-- شاشة الكاشير -->
@@ -228,7 +230,7 @@
             </div>
           </div>
           <div class="summary-line"><span>المطلوب بعد الخصم</span><strong id="dueTotal">٠ ج.م</strong></div>
-          <button id="completeSale" class="primary" style="width:100%;margin-top:10px;">💾 إتمام وتأكيد الفاتورة سحابياً</button>
+          <button id="completeSale" class="primary" style="width:100%;margin-top:10px;">💾 إتمام وتأكيد الفاتورة</button>
         </div>
       </div>
     </section>
@@ -236,7 +238,7 @@
     <!-- شاشة المخزن -->
     <section id="productsView" class="view hidden">
       <div class="panel">
-        <h2 id="productFormTitle">إضافة صنف جديد للمخزن السحابي</h2>
+        <h2 id="productFormTitle">إضافة صنف جديد للمخزن</h2>
         <form id="productForm" class="form-grid">
           <input type="hidden" id="editingProductId">
           <div class="field">
@@ -263,7 +265,7 @@
             <button type="button" class="danger" id="btnCloseScannerProduct" style="width:100%; margin-top:5px;">إغلاق الكاميرا</button>
           </div>
           <div class="actions full">
-            <button class="primary" type="submit" id="saveProductBtn">💾 حفظ الصنف سحابياً</button>
+            <button class="primary" type="submit" id="saveProductBtn">💾 حفظ الصنف</button>
             <button type="button" id="cancelEditBtn" class="secondary hidden" onclick="cancelEditProduct()">إلغاء التعديل</button>
           </div>
         </form>
@@ -282,36 +284,64 @@
     <section id="invoicesView" class="view hidden">
       <div class="panel">
         <div class="row">
-          <h2>سجل الفواتير السحابية</h2>
+          <h2>سجل الفواتير</h2>
           <button id="exportInvoices" class="secondary">تصدير الفواتير المفصل CSV</button>
         </div>
         <div id="invoicesList" class="invoice-list"></div>
       </div>
     </section>
 
-    <!-- شاشة كشف الحساب والتقارير -->
+    <!-- شاشة المصاريف اليومية -->
+    <section id="expensesView" class="view hidden">
+      <div class="panel">
+        <h2>💸 تسجيل المصاريف اليومية</h2>
+        <form id="expenseForm" class="form-grid">
+          <div class="field">
+            <label for="expenseTitle">بيان المصروف</label>
+            <input id="expenseTitle" required placeholder="مثال: فاتورة كهرباء، نثريات...">
+          </div>
+          <div class="field">
+            <label for="expenseAmount">المبلغ (ج.م)</label>
+            <input id="expenseAmount" required type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div class="actions full">
+            <button class="primary" type="submit">➕ تسجيل المصروف</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>سجل مصاريف اليوم</h2>
+        <div id="expensesList" class="product-list"></div>
+      </div>
+    </section>
+
+    <!-- شاشة التقارير -->
     <section id="reportsView" class="view hidden">
       <div class="panel">
-        <h2>📊 كشف حساب وتقارير المبيعات</h2>
-        <div class="form-grid" style="margin-bottom:15px;">
+        <div class="row" style="margin-bottom:12px;">
+          <h2>📊 تقرير المبيعات وحركة اليوم</h2>
+          <button class="primary" onclick="sendDailyReportWhatsApp()">📱 إرسال تقرير اليوم واتساب</button>
+        </div>
+        <div class="form-grid">
           <div class="card">
             <div class="muted">إجمالي المبيعات</div>
             <h3 id="repTotalSales">٠ ج.م</h3>
           </div>
           <div class="card">
+            <div class="muted">إجمالي المصاريف</div>
+            <h3 id="repTotalExpenses" style="color:var(--red);">٠ ج.م</h3>
+          </div>
+          <div class="card">
+            <div class="muted">صافي الدرج (سالب / ربح اليوم)</div>
+            <h3 id="repNetProfit">٠ ج.م</h3>
+          </div>
+          <div class="card">
             <div class="muted">عدد الفواتير</div>
             <h3 id="repInvoicesCount">٠</h3>
           </div>
-          <div class="card">
-            <div class="muted">إجمالي الخصومات</div>
-            <h3 id="repTotalDiscounts">٠ ج.م</h3>
-          </div>
-          <div class="card">
-            <div class="muted">المبالغ الآجلة (المتبقية)</div>
-            <h3 id="repTotalRemaining">٠ ج.م</h3>
-          </div>
         </div>
-        <h3>كشف حساب العملاء الآجل</h3>
+        <h3 style="margin-top:15px;">المبالغ الآجلة (المتبقية على العملاء)</h3>
         <div id="customerAccountsList" class="invoice-list"></div>
       </div>
     </section>
@@ -323,113 +353,166 @@
   <script>
     "use strict";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB9EWlvR5e72lZqF_a0pneOUrJ1_H3ryMA",
-      authDomain: "alsaeedy-mall.firebaseapp.com",
-      databaseURL: "https://alsaeedy-mall-default-rtdb.firebaseio.com",
-      projectId: "alsaeedy-mall",
-      storageBucket: "alsaeedy-mall.firebasestorage.app",
-      messagingSenderId: "542292216756",
-      appId: "1:542292216756:web:7dbfa21e46b757aa1a80e1"
-    };
-
-    let db = null;
-    try {
-      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-      db = firebase.firestore();
-    } catch(e) {
-      console.error("خطأ في تهيئة Firebase:", e);
-    }
-
-    let products = [];
-    let invoices = [];
+    let products = JSON.parse(localStorage.getItem("sm_products") || "[]");
+    let invoices = JSON.parse(localStorage.getItem("sm_invoices") || "[]");
+    let expenses = JSON.parse(localStorage.getItem("sm_expenses") || "[]");
     let cart = [];
 
     const $ = id => document.getElementById(id);
     const money = v => new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP" }).format(Number(v) || 0);
     const escapeHtml = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
+    function saveData() {
+      localStorage.setItem("sm_products", JSON.stringify(products));
+      localStorage.setItem("sm_invoices", JSON.stringify(invoices));
+      localStorage.setItem("sm_expenses", JSON.stringify(expenses));
+      renderAll();
+    }
+
     function showView(viewId) {
       document.querySelectorAll(".view").forEach(v => v.classList.toggle("hidden", v.id !== viewId));
       document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === viewId));
       $("receipt").classList.add("hidden");
       if(viewId === "reportsView") renderReports();
+      if(viewId === "expensesView") renderExpenses();
     }
 
-    // الاستماع الفوري للتغييرات من قاعدة البيانات (Real-time listener) لمنع الحاجة للريفرش
-    function initRealtimeSync() {
-      if (!db) {
-        $("cloudStatus").textContent = "🔴 فشل الاتصال بقاعدة البيانات السحابية";
-        return;
-      }
-
-      // جلب ومتابعة تحديثات المنتجات فوريًا
-      db.collection("products").onSnapshot(snapshot => {
-        products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderAll();
-        $("cloudStatus").textContent = "🟢 متصل بالسحابة بنجاح (تحديث فوري نشط) | الأصناف: " + products.length + " | الفواتير: " + invoices.length;
-      }, err => {
-        console.error("خطأ في مزامنة المنتجات:", err);
-      });
-
-      // جلب ومتابعة تحديثات الفواتير فوريًا
-      db.collection("invoices").onSnapshot(snapshot => {
-        invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderAll();
-      }, err => {
-        console.error("خطأ في مزامنة الفواتير:", err);
-      });
+    // --- النسخ الاحتياطي والاستعادة ---
+    function exportBackup() {
+      const backup = { products, invoices, expenses, date: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `SaidiMall_Backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
     }
 
-    // --- تشغيل الكاميرا للبحث ---
-    let html5QrcodeScannerSale = null;
-    let html5QrcodeScannerProduct = null;
+    function importBackup(event) {
+      const file = event.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if(data.products && data.invoices) {
+            products = data.products;
+            invoices = data.invoices;
+            expenses = data.expenses || [];
+            saveData();
+            alert("✅ تمت استعادة النسخة الاحتياطية بنجاح!");
+          } else {
+            alert("❌ الملف غير صالح.");
+          }
+        } catch(err) {
+          alert("❌ خطأ في قراءة الملف.");
+        }
+      };
+      reader.readAsText(file);
+    }
 
+    // --- تشغيل الكاميرا ---
+    let scannerSale = null, scannerProduct = null;
     $("btnScanSale").addEventListener("click", () => {
       $("scannerContainerSale").classList.remove("hidden");
-      html5QrcodeScannerSale = new Html5Qrcode("readerSale");
-      html5QrcodeScannerSale.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => {
-        $("productSearch").value = decodedText;
+      scannerSale = new Html5Qrcode("readerSale");
+      scannerSale.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
+        $("productSearch").value = text;
         renderSearch();
-        html5QrcodeScannerSale.stop();
+        scannerSale.stop();
         $("scannerContainerSale").classList.add("hidden");
-      }).catch(err => alert("عذراً، تعذر فتح الكاميرا: " + err));
+      }).catch(e => alert("تعذر فتح الكاميرا"));
     });
-
-    $("btnCloseScannerSale").addEventListener("click", () => {
-      if(html5QrcodeScannerSale) html5QrcodeScannerSale.stop();
-      $("scannerContainerSale").classList.add("hidden");
-    });
+    $("btnCloseScannerSale").addEventListener("click", () => { if(scannerSale) scannerSale.stop(); $("scannerContainerSale").classList.add("hidden"); });
 
     $("btnScanProduct").addEventListener("click", () => {
       $("scannerContainerProduct").classList.remove("hidden");
-      html5QrcodeScannerProduct = new Html5Qrcode("readerProduct");
-      html5QrcodeScannerProduct.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => {
-        $("productBarcode").value = decodedText;
-        html5QrcodeScannerProduct.stop();
+      scannerProduct = new Html5Qrcode("readerProduct");
+      scannerProduct.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
+        $("productBarcode").value = text;
+        scannerProduct.stop();
         $("scannerContainerProduct").classList.add("hidden");
-      }).catch(err => alert("عذراً، تعذر فتح الكاميرا: " + err));
+      }).catch(e => alert("تعذر فتح الكاميرا"));
+    });
+    $("btnCloseScannerProduct").addEventListener("click", () => { if(scannerProduct) scannerProduct.stop(); $("scannerContainerProduct").classList.add("hidden"); });
+
+    // --- المخزن ---
+    $("productForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const id = $("editingProductId").value;
+      const name = $("productName").value.trim();
+      const price = Number($("productPrice").value);
+      const stock = Number($("productStock").value);
+      const barcode = $("productBarcode").value.trim();
+
+      if(id) {
+        const p = products.find(item => item.id === id);
+        if(p) { p.name = name; p.price = price; p.stock = stock; p.barcode = barcode; }
+        alert("✅ تم تحديث الصنف بنجاح!");
+        cancelEditProduct();
+      } else {
+        products.push({ id: "PRD_" + Date.now().toString(36), name, price, stock, barcode });
+        alert("✅ تم إضافة الصنف للمخزن!");
+        e.target.reset();
+      }
+      saveData();
     });
 
-    $("btnCloseScannerProduct").addEventListener("click", () => {
-      if(html5QrcodeScannerProduct) html5QrcodeScannerProduct.stop();
-      $("scannerContainerProduct").classList.add("hidden");
-    });
+    function renderProducts() {
+      $("productsList").innerHTML = products.length ? products.map(p => `
+        <div class="item">
+          <div>
+            <div class="item-title">${escapeHtml(p.name)}</div>
+            <div class="muted">السعر: ${money(p.price)} | المخزن: <strong>${p.stock}</strong> ${p.barcode ? ' | باركود: ' + escapeHtml(p.barcode) : ''}</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="small-button" onclick="editProduct('${p.id}')">✏️ تعديل</button>
+            <button class="danger" onclick="deleteProduct('${p.id}')">حذف</button>
+          </div>
+        </div>
+      `).join("") : `<div class="empty">لا توجد أصناف بالمخزن.</div>`;
+    }
 
-    // --- دوال العرض والتحديث الفوري ---
+    window.editProduct = function(id) {
+      const p = products.find(item => item.id === id);
+      if(!p) return;
+      $("editingProductId").value = p.id;
+      $("productName").value = p.name;
+      $("productPrice").value = p.price;
+      $("productStock").value = p.stock;
+      $("productBarcode").value = p.barcode || "";
+      $("productFormTitle").textContent = "تعديل صنف: " + p.name;
+      $("saveProductBtn").textContent = "💾 تحديث الصنف";
+      $("cancelEditBtn").classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.cancelEditProduct = function() {
+      $("editingProductId").value = "";
+      $("productForm").reset();
+      $("productFormTitle").textContent = "إضافة صنف جديد للمخزن";
+      $("saveProductBtn").textContent = "💾 حفظ الصنف";
+      $("cancelEditBtn").classList.add("hidden");
+    };
+
+    window.deleteProduct = function(id) {
+      if(!confirm("هل أنت متأكد من حذف الصنف؟")) return;
+      products = products.filter(p => p.id !== id);
+      saveData();
+    };
+
+    // --- الكاشير ---
     function renderSearch() {
       const q = $("productSearch").value.trim().toLowerCase();
       const found = products.filter(p => p.name.toLowerCase().includes(q) || (p.barcode && p.barcode.toLowerCase().includes(q)));
-
       $("searchResults").innerHTML = found.length ? found.map(p => `
         <div class="item">
           <div>
             <div class="item-title">${escapeHtml(p.name)}</div>
-            <div class="muted">المتاح بالمخزن: ${p.stock} ${p.barcode ? ' | باركود: ' + escapeHtml(p.barcode) : ''}</div>
+            <div class="muted">المتاح: ${p.stock}</div>
           </div>
           <div class="row">
             <span class="price">${money(p.price)}</span>
-            <button class="small-button" onclick="addToCart('${p.id}')">إضافة للسلة</button>
+            <button class="small-button" onclick="addToCart('${p.id}')">إضافة</button>
           </div>
         </div>
       `).join("") : `<div class="empty">لا توجد أصناف مطابقة.</div>`;
@@ -459,10 +542,10 @@
 
     window.addToCart = function(id) {
       const p = products.find(item => item.id === id);
-      if (!p || p.stock <= 0) return alert("الصنف غير متوفر بالمخزن!");
+      if(!p || p.stock <= 0) return alert("الصنف غير متوفر!");
       const item = cart.find(i => i.id === id);
-      if (item) {
-        if (item.quantity >= p.stock) return alert("الكمية المطلوبة تتجاوز المخزون!");
+      if(item) {
+        if(item.quantity >= p.stock) return alert("الكمية تتجاوز المخزون!");
         item.quantity++;
       } else {
         cart.push({ id: p.id, name: p.name, price: p.price, quantity: 1 });
@@ -473,10 +556,10 @@
     window.changeQty = function(id, delta) {
       const item = cart.find(i => i.id === id);
       const p = products.find(item => item.id === id);
-      if (!item) return;
-      if (delta > 0 && item.quantity >= p.stock) return alert("المخزون لا يكفي!");
+      if(!item) return;
+      if(delta > 0 && item.quantity >= p.stock) return alert("المخزون لا يكفي!");
       item.quantity += delta;
-      if (item.quantity <= 0) cart = cart.filter(i => i.id !== id);
+      if(item.quantity <= 0) cart = cart.filter(i => i.id !== id);
       renderCart();
     };
 
@@ -485,89 +568,8 @@
       renderCart();
     };
 
-    // --- إضافة أو تحديث منتج بالمخزن سحابياً ---
-    $("productForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const editingId = $("editingProductId").value;
-      const name = $("productName").value.trim();
-      const price = Number($("productPrice").value);
-      const stock = Number($("productStock").value);
-      const barcode = $("productBarcode").value.trim();
-
-      if (!name || price < 0 || stock < 0) return alert("يرجى إدخال بيانات صحيحة.");
-
-      try {
-        if (editingId) {
-          // تحديث صنف موجود
-          if(db) await db.collection("products").doc(editingId).update({ name, price, stock, barcode });
-          alert("✅ تم تحديث بيانات الصنف بنجاح!");
-          cancelEditProduct();
-        } else {
-          // إضافة صنف جديد
-          const newProduct = {
-            id: "PRD_" + Date.now().toString(36),
-            name, price, stock, barcode
-          };
-          if(db) await db.collection("products").doc(newProduct.id).set(newProduct);
-          alert("✅ تم حفظ الصنف بالمخزن السحابي بنجاح!");
-          e.target.reset();
-        }
-      } function(err) {} catch(err) {
-        alert("❌ تعذر حفظ أو تحديث الصنف: " + err.message);
-      }
-    });
-
-    function renderProducts() {
-      $("productsList").innerHTML = products.length ? products.map(p => `
-        <div class="item">
-          <div>
-            <div class="item-title">${escapeHtml(p.name)}</div>
-            <div class="muted">السعر: ${money(p.price)} | الكمية بالمخزن: <strong>${p.stock}</strong> ${p.barcode ? ' | باركود: ' + escapeHtml(p.barcode) : ''}</div>
-          </div>
-          <div style="display:flex; gap:4px;">
-            <button class="small-button" onclick="editProduct('${p.id}')">✏️ تعديل</button>
-            <button class="danger" onclick="deleteProduct('${p.id}')">حذف</button>
-          </div>
-        </div>
-      `).join("") : `<div class="empty">لا توجد أصناف بالمخزن.</div>`;
-    }
-
-    // تعبئة نموذج التعديل ببيانات الصنف
-    window.editProduct = function(id) {
-      const p = products.find(item => item.id === id);
-      if(!p) return;
-      $("editingProductId").value = p.id;
-      $("productName").value = p.name;
-      $("productPrice").value = p.price;
-      $("productStock").value = p.stock;
-      $("productBarcode").value = p.barcode || "";
-      $("productFormTitle").textContent = "تعديل بيانات الصنف: " + p.name;
-      $("saveProductBtn").textContent = "💾 تحديث الصنف";
-      $("cancelEditBtn").classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    window.cancelEditProduct = function() {
-      $("editingProductId").value = "";
-      $("productForm").reset();
-      $("productFormTitle").textContent = "إضافة صنف جديد للمخزن السحابي";
-      $("saveProductBtn").textContent = "💾 حفظ الصنف سحابياً";
-      $("cancelEditBtn").classList.add("hidden");
-    };
-
-    window.deleteProduct = async function(id) {
-      if(!confirm("هل أنت متأكد من حذف الصنف من السحابة؟")) return;
-      try {
-        if(db) await db.collection("products").doc(id).delete();
-      } catch(e) {
-        alert("❌ تعذر الحذف من السحابة.");
-      }
-    };
-
-    // --- إتمام البيع سحابياً ---
-    $("completeSale").addEventListener("click", async () => {
-      if (!cart.length) return alert("السلة فارغة!");
-
+    $("completeSale").addEventListener("click", () => {
+      if(!cart.length) return alert("السلة فارغة!");
       const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
       const discount = Number($("discount").value) || 0;
       const total = subtotal - discount;
@@ -580,36 +582,25 @@
         customerName: $("customerName").value.trim() || "عميل نقدي",
         customerPhone: $("customerPhone").value.trim() || "بدون هاتف",
         items: [...cart],
-        subtotal, discount, total, paid,
-        remaining: total - paid
+        subtotal, discount, total, paid, remaining: total - paid
       };
 
-      try {
-        if(db) {
-          await db.collection("invoices").doc(invoice.id).set(invoice);
-          for (let cItem of cart) {
-            const p = products.find(prod => prod.id === cItem.id);
-            if (p) {
-              let updatedStock = Math.max(0, p.stock - cItem.quantity);
-              await db.collection("products").doc(p.id).update({ stock: updatedStock });
-            }
-          }
-        }
+      cart.forEach(c => {
+        const p = products.find(prod => prod.id === c.id);
+        if(p) p.stock = Math.max(0, p.stock - c.quantity);
+      });
 
-        cart = [];
-        $("discount").value = "0";
-        $("paid").value = "";
-        $("customerName").value = "";
-        $("customerPhone").value = "";
-
-        showReceipt(invoice);
-        alert("✅ تم إتمام الفاتورة وحفظها سحابياً وتحديث المخزن بنجاح!");
-      } catch(err) {
-        alert("❌ حدث خطأ أثناء الحفظ بالسحابة: " + err.message);
-      }
+      invoices.push(invoice);
+      cart = [];
+      $("discount").value = "0";
+      $("paid").value = "";
+      $("customerName").value = "";
+      $("customerPhone").value = "";
+      saveData();
+      showReceipt(invoice);
     });
 
-    // --- عرض وحذف وتعديل الفواتير ---
+    // --- الفواتير ---
     function renderInvoices() {
       $("invoicesList").innerHTML = invoices.length ? [...invoices].reverse().map(inv => `
         <div class="item">
@@ -619,12 +610,11 @@
             <div class="price">${money(inv.total)}</div>
           </div>
           <div style="display:flex; gap:4px;">
-            <button class="secondary" onclick="viewInvoice('${inv.id}')">عرض / طباعة</button>
-            <button class="small-button" onclick="editInvoice('${inv.id}')">✏️ تعديل</button>
-            <button class="danger" onclick="deleteInvoice('${inv.id}')">🗑️ حذف</button>
+            <button class="secondary" onclick="viewInvoice('${inv.id}')">عرض</button>
+            <button class="danger" onclick="deleteInvoice('${inv.id}')">حذف</button>
           </div>
         </div>
-      `).join("") : `<div class="empty">لا توجد فواتير محفوظة.</div>`;
+      `).join("") : `<div class="empty">لا توجد فواتير.</div>`;
     }
 
     window.viewInvoice = function(id) {
@@ -632,149 +622,148 @@
       if(inv) showReceipt(inv);
     };
 
-    window.deleteInvoice = async function(id) {
-      if(!confirm("هل أنت متأكد من إلغاء وحذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن السحابي.")) return;
-      
+    window.deleteInvoice = function(id) {
+      if(!confirm("إلغاء وحذف الفاتورة وإرجاع الأصناف للمخزن؟")) return;
       const inv = invoices.find(i => i.id === id);
       if(inv) {
-        try {
-          if(db) {
-            await db.collection("invoices").doc(id).delete();
-            for (let item of inv.items) {
-              const p = products.find(prod => prod.id === item.id);
-              if(p) {
-                let restoredStock = p.stock + item.quantity;
-                await db.collection("products").doc(item.id).update({ stock: restoredStock });
-              }
-            }
-          }
-          alert("✅ تم حذف الفاتورة وإعادة الكميات للمخزن السحابي بنجاح!");
-        } catch(e) {
-          alert("❌ تعذر حذف الفاتورة من السحابة.");
-        }
-      }
-    };
-
-    window.editInvoice = function(id) {
-      const inv = invoices.find(i => i.id === id);
-      if(!inv) return;
-      if(confirm("سيتم نقل محتويات الفاتورة إلى شاشة الكاشير لتعديلها. هل تريد المتابعة؟")) {
-        // إرجاع الكميات مؤقتا للمخزن
-        inv.items.forEach(async (item) => {
+        inv.items.forEach(item => {
           const p = products.find(prod => prod.id === item.id);
-          if(p && db) {
-            await db.collection("products").doc(item.id).update({ stock: p.stock + item.quantity });
-          }
+          if(p) p.stock += item.quantity;
         });
-
-        cart = [...inv.items];
-        $("customerName").value = inv.customerName === "عميل نقدي" ? "" : inv.customerName;
-        $("customerPhone").value = inv.customerPhone === "بدون هاتف" ? "" : inv.customerPhone;
-        $("discount").value = inv.discount;
-        $("paid").value = inv.paid;
-
-        if(db) db.collection("invoices").doc(id).delete(); // حذف الفاتورة القديمة
-        showView("saleView");
-        renderCart();
+        invoices = invoices.filter(i => i.id !== id);
+        saveData();
       }
     };
 
     function showReceipt(inv) {
-      const lines = inv.items.map(i => `
-        <div class="summary-line">
-          <span>${escapeHtml(i.name)} × ${i.quantity}</span>
-          <span>${money(i.price * i.quantity)}</span>
-        </div>
-      `).join("");
-
+      const lines = inv.items.map(i => `<div class="summary-line"><span>${escapeHtml(i.name)} × ${i.quantity}</span><span>${money(i.price * i.quantity)}</span></div>`).join("");
       $("receipt").innerHTML = `
         <div id="receiptContent" style="background:#fff; padding:15px;">
           <h2 style="text-align:center;margin:0;">🛒 مول الصعيدي</h2>
-          <div style="text-align:center;font-size:13px;" class="muted">فاتورة مبيعات سحابية</div>
+          <div style="text-align:center;font-size:13px;" class="muted">فاتورة مبيعات</div>
           <hr>
           <p><strong>رقم الفاتورة:</strong> ${escapeHtml(inv.id)}</p>
           <p><strong>التاريخ:</strong> ${new Date(inv.date).toLocaleString("ar-EG")}</p>
           <p><strong>العميل:</strong> ${escapeHtml(inv.customerName)} (${escapeHtml(inv.customerPhone)})</p>
           <hr>${lines}<hr>
-          <div class="summary-line"><span>الإجمالي:</span><strong>${money(inv.subtotal)}</strong></div>
-          <div class="summary-line"><span>الخصم:</span><strong>${money(inv.discount)}</strong></div>
-          <div class="summary-line"><span>الصافي:</span><strong>${money(inv.total)}</strong></div>
+          <div class="summary-line"><span>الإجمالي:</span><strong>${money(inv.total)}</strong></div>
           <div class="summary-line"><span>المدفوع:</span><strong>${money(inv.paid)}</strong></div>
           <div class="summary-line"><span>المتبقي:</span><strong>${money(inv.remaining)}</strong></div>
         </div>
         <div class="actions no-print" style="margin-top:12px;">
-          <button class="primary" onclick="window.print()">🖨️ طباعة الفاتورة</button>
-          <button class="secondary" onclick="shareText('${inv.id}')">📱 مشاركة واتساب (نص)</button>
-          <button class="secondary" onclick="shareImage()">📸 مشاركة واتساب (صورة)</button>
+          <button class="primary" onclick="window.print()">🖨️ طباعة</button>
+          <button class="secondary" onclick="shareInvoiceText('${inv.id}')">📱 مشاركة واتساب</button>
         </div>
       `;
       $("receipt").classList.remove("hidden");
     }
 
-    window.shareText = function(id) {
+    window.shareInvoiceText = function(id) {
       const inv = invoices.find(i => i.id === id);
-      let itemsText = inv.items.map(i => `▪️ ${i.name} (عدد: ${i.quantity}) - ${i.price * i.quantity} ج.م`).join("\n");
-      let msg = `🛒 *مول الصعيدي* - فاتورة مبيعات\n` +
-                `---------------------------\n` +
-                `📄 *الفاتورة:* ${inv.id}\n` +
-                `👤 *العميل:* ${inv.customerName}\n` +
-                `📦 *الأصناف:*\n${itemsText}\n` +
-                `---------------------------\n` +
-                `💵 *الصافي:* ${money(inv.total)}\n` +
-                `💳 *المدفوع:* ${money(inv.paid)}\n` +
-                `🔄 *المتبقي:* ${money(inv.remaining)}`;
+      let itemsText = inv.items.map(i => `▪️ ${i.name} (${i.quantity}) - ${i.price * i.quantity}ج`).join("\n");
+      let msg = `🛒 *مول الصعيدي* - فاتورة مبيعات\nرقم: ${inv.id}\nالعميل: ${inv.customerName}\n\nالأصناف:\n${itemsText}\n\nالإجمالي: ${money(inv.total)}`;
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
-    window.shareImage = function() {
-      html2canvas($("receiptContent"), { scale: 2 }).then(canvas => {
-        canvas.toBlob(blob => {
-          let file = new File([blob], "invoice.png", { type: "image/png" });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({ files: [file], title: 'فاتورة مول الصعيدي' });
-          } else {
-            let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Invoice.png'; a.click();
-            alert("تم تنزيل الصورة، يمكنك مشاركتها الآن عبر الواتساب.");
-          }
-        });
-      });
+    // --- المصاريف اليومية ---
+    $("expenseForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = $("expenseTitle").value.trim();
+      const amount = Number($("expenseAmount").value);
+      if(!title || amount <= 0) return alert("أدخل بيانات صحيحة للمصروف.");
+
+      expenses.push({ id: "EXP_" + Date.now().toString(36), title, amount, date: new Date().toISOString() });
+      saveData();
+      e.target.reset();
+      renderExpenses();
+    });
+
+    function renderExpenses() {
+      $("expensesList").innerHTML = expenses.length ? expenses.map(e => `
+        <div class="item">
+          <div>
+            <div class="item-title">${escapeHtml(e.title)}</div>
+            <div class="muted">${new Date(e.date).toLocaleTimeString("ar-EG")}</div>
+          </div>
+          <div class="row">
+            <span class="price" style="color:var(--red);">${money(e.amount)}</span>
+            <button class="danger" onclick="deleteExpense('${e.id}')">حذف</button>
+          </div>
+        </div>
+      `).join("") : `<div class="empty">لا توجد مصاريف مسجلة اليوم.</div>`;
+    }
+
+    window.deleteExpense = function(id) {
+      expenses = expenses.filter(e => e.id !== id);
+      saveData();
+      renderExpenses();
     };
 
+    // --- التقارير وتقرير الواتسب اليومي ---
     function renderReports() {
       const totalSales = invoices.reduce((s, i) => s + i.total, 0);
-      const totalDiscounts = invoices.reduce((s, i) => s + i.discount, 0);
-      const totalRemaining = invoices.reduce((s, i) => s + i.remaining, 0);
+      const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+      const netProfit = totalSales - totalExpenses;
 
       $("repTotalSales").textContent = money(totalSales);
+      $("repTotalExpenses").textContent = money(totalExpenses);
+      $("repNetProfit").textContent = money(netProfit);
       $("repInvoicesCount").textContent = invoices.length;
-      $("repTotalDiscounts").textContent = money(totalDiscounts);
-      $("repTotalRemaining").textContent = money(totalRemaining);
 
       const dueInvoices = invoices.filter(i => i.remaining > 0);
       $("customerAccountsList").innerHTML = dueInvoices.length ? dueInvoices.map(inv => `
         <div class="item">
           <div>
             <div class="item-title">${escapeHtml(inv.customerName)} (${escapeHtml(inv.customerPhone)})</div>
-            <div class="muted">فاتورة: ${inv.id} | صافي الفاتورة: ${money(inv.total)}</div>
+            <div class="muted">فاتورة: ${inv.id}</div>
           </div>
-          <div class="price" style="color:var(--red);">متبقي عليه: ${money(inv.remaining)}</div>
+          <div class="price" style="color:var(--red);">متبقي: ${money(inv.remaining)}</div>
         </div>
-      `).join("") : `<div class="empty">لا توجد مبالغ آجلة على العملاء.</div>`;
+      `).join("") : `<div class="empty">لا توجد مبالغ آجلة.</div>`;
     }
 
+    window.sendDailyReportWhatsApp = function() {
+      const totalSales = invoices.reduce((s, i) => s + i.total, 0);
+      const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+      const netProfit = totalSales - totalExpenses;
+
+      let report = `📊 *تقرير مبيعات مول الصعيدي اليومي*\n` +
+                   `📅 *التاريخ:* ${new Date().toLocaleDateString("ar-EG")}\n` +
+                   `-----------------------------------\n` +
+                   `💰 *إجمالي المبيعات:* ${money(totalSales)}\n` +
+                   `💸 *إجمالي المصاريف:* ${money(totalExpenses)}\n` +
+                   `📉 *صافي الدرج (الربح):* ${money(netProfit)}\n` +
+                   `📄 *عدد الفواتير:* ${invoices.length}\n` +
+                   `-----------------------------------\n` +
+                   `📋 *تفاصيل الفواتير اليومية:*\n`;
+
+      invoices.forEach((inv, idx) => {
+        let itemsStr = inv.items.map(i => `${i.name}(${i.quantity})`).join(", ");
+        report += `${idx + 1}. [${inv.id}] ${inv.customerName} - ${money(inv.total)} (${itemsStr})\n`;
+      });
+
+      let expStr = expenses.map(e => `• ${e.title}: ${money(e.amount)}`).join("\n");
+      if(expenses.length > 0) {
+        report += `\n💸 *المصاريف:* \n${expStr}\n`;
+      }
+
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(report)}`, '_blank');
+    };
+
+    // --- التصدير CSV ---
     $("exportInvoices").addEventListener("click", () => {
-      let csv = "\uFEFFرقم الفاتورة,التاريخ,اسم العميل,رقم الهاتف,الصنف,الكمية,سعر القطعة,إجمالي الصنف,إجمالي الفاتورة,المدفوع,المتبقي\n";
+      let csv = "\uFEFFرقم الفاتورة,التاريخ,اسم العميل,رقم الهاتف,الصنف,الكمية,سعر القطعة,إجمالي الصنف,إجمالي الفاتورة\n";
       invoices.forEach(inv => {
         inv.items.forEach(item => {
-          csv += `"${inv.id}","${new Date(inv.date).toLocaleString('ar-EG')}","${inv.customerName}","${inv.customerPhone}","${item.name}",${item.quantity},${item.price},${item.quantity * item.price},${inv.total},${inv.paid},${inv.remaining}\n`;
+          csv += `"${inv.id}","${new Date(inv.date).toLocaleString('ar-EG')}","${inv.customerName}","${inv.customerPhone}","${item.name}",${item.quantity},${item.price},${item.quantity * item.price},${inv.total}\n`;
         });
       });
       let blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Detailed_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+      let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Invoices_${new Date().toISOString().slice(0,10)}.csv`; a.click();
     });
 
     $("exportProducts").addEventListener("click", () => {
-      let csv = "\uFEFFاسم الصنف,السعر,الكمية بالمخزن,الباركود\n";
+      let csv = "\uFEFFاسم الصنف,السعر,المخزن,الباركود\n";
       products.forEach(p => { csv += `"${p.name}",${p.price},${p.stock},"${p.barcode || ''}"\n`; });
       let blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Inventory_${new Date().toISOString().slice(0,10)}.csv`; a.click();
@@ -785,14 +774,14 @@
       renderCart();
       renderProducts();
       renderInvoices();
+      renderExpenses();
     }
 
     document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
     $("productSearch").addEventListener("input", renderSearch);
     $("discount").addEventListener("input", renderCart);
 
-    // تفعيل المزامنة الفورية السحابية
-    initRealtimeSync();
+    renderAll();
   </script>
 </body>
 </html>
