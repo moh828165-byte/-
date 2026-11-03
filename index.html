@@ -377,7 +377,6 @@
       if(viewId === "expensesView") renderExpenses();
     }
 
-    // --- النسخ الاحتياطي والاستعادة ---
     function exportBackup() {
       const backup = { products, invoices, expenses, date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -410,7 +409,6 @@
       reader.readAsText(file);
     }
 
-    // --- إعدادات الماسح الضوئي للباركود الخطي (الخطوط فقط دون QR المربع) ---
     const barcodeFormatsToSupport = [
       Html5QrcodeSupportedFormats.EAN_13,
       Html5QrcodeSupportedFormats.EAN_8,
@@ -431,7 +429,6 @@
         (text) => {
           $("productSearch").value = text;
           renderSearch();
-          // فحص تلقائي للبحث السريع لو الباركود مطابق
           const exact = products.find(p => p.barcode === text);
           if(exact && exact.stock > 0) {
             addToCart(exact.id);
@@ -462,7 +459,6 @@
     });
     $("btnCloseScannerProduct").addEventListener("click", () => { if(scannerProduct) scannerProduct.stop(); $("scannerContainerProduct").classList.add("hidden"); });
 
-    // --- المخزن ---
     $("productForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const id = $("editingProductId").value;
@@ -527,7 +523,6 @@
       saveData();
     };
 
-    // --- الكاشير ---
     function renderSearch() {
       const q = $("productSearch").value.trim().toLowerCase();
       const found = products.filter(p => p.name.toLowerCase().includes(q) || (p.barcode && p.barcode.toLowerCase().includes(q)));
@@ -584,7 +579,7 @@
       const item = cart.find(i => i.id === id);
       const p = products.find(item => item.id === id);
       if(!item) return;
-      if(delta > 0 && item.quantity >= p.stock) return alert("المخزون لا يكفي!");
+      if(delta > 0 && item.quantity >= p.stock) return alert("المخزن لا يكفي!");
       item.quantity += delta;
       if(item.quantity <= 0) cart = cart.filter(i => i.id !== id);
       renderCart();
@@ -627,7 +622,6 @@
       showReceipt(invoice);
     });
 
-    // --- الفواتير ---
     function renderInvoices() {
       $("invoicesList").innerHTML = invoices.length ? [...invoices].reverse().map(inv => `
         <div class="item">
@@ -662,11 +656,13 @@
       }
     };
 
+    // تصميم الإيصال الجديد (مرتب وواضح: الاسم - العدد - الإجمالي)
     function showReceipt(inv) {
-      const lines = inv.items.map(i => `
-        <div class="summary-line">
-          <span>${escapeHtml(i.name)} (×${i.quantity})</span>
-          <span>${money(i.price * i.quantity)}</span>
+      const lines = inv.items.map((i, idx) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:6px 0; font-size:13px; border-bottom:1px dotted #eee; padding-bottom:4px;">
+          <span>${idx + 1}. ${escapeHtml(i.name)}</span>
+          <span style="color:#666; font-size:12px;">(عدد: ${i.quantity})</span>
+          <strong style="white-space:nowrap;">${money(i.price * i.quantity)}</strong>
         </div>
       `).join("");
 
@@ -679,7 +675,7 @@
           <p style="margin:4px 0; font-size:13px;"><strong>التاريخ:</strong> ${new Date(inv.date).toLocaleString("ar-EG")}</p>
           <p style="margin:4px 0; font-size:13px;"><strong>العميل:</strong> ${escapeHtml(inv.customerName)}</p>
           <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
-          <div style="font-weight:600; margin-bottom:5px; font-size:13px;">الأصناف:</div>
+          <div style="font-weight:600; margin-bottom:5px; font-size:13px;">الأصناف (الاسم — العدد — الإجمالي):</div>
           ${lines}
           <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
           <div class="summary-line"><span>الإجمالي:</span><strong>${money(inv.subtotal)}</strong></div>
@@ -717,7 +713,6 @@
       });
     };
 
-    // --- المصاريف اليومية ---
     $("expenseForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const title = $("expenseTitle").value.trim();
@@ -751,7 +746,6 @@
       renderExpenses();
     };
 
-    // --- التقارير وتقرير الواتساب ---
     function renderReports() {
       const totalSales = invoices.reduce((s, i) => s + i.total, 0);
       const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
@@ -774,6 +768,7 @@
       `).join("") : `<div class="empty">لا توجد مبالغ آجلة.</div>`;
     }
 
+    // تصميم تقرير الواتساب اليومي الجديد (مرقم: الاسم - العدد - الإجمالي)
     window.sendDailyReportWhatsApp = function() {
       const totalSales = invoices.reduce((s, i) => s + i.total, 0);
       const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
@@ -795,7 +790,7 @@
         invoices.forEach((inv, idx) => {
           report += `*${idx + 1}. [${inv.id}] - ${inv.customerName}*\n`;
           inv.items.forEach(item => {
-            report += `   ▪️ ${item.name} (عدد: ${item.quantity}) — ${money(item.price * item.quantity)}\n`;
+            report += `   ▪️ ${item.name} | العدد: ${item.quantity} | ${money(item.price * item.quantity)}\n`;
           });
           report += `   💵 *إجمالي الفاتورة:* ${money(inv.total)}\n`;
           if(idx < invoices.length - 1) report += `   ---------------------------\n`;
@@ -813,7 +808,6 @@
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(report)}`, '_blank');
     };
 
-    // --- التصدير CSV ---
     $("exportInvoices").addEventListener("click", () => {
       let csv = "\uFEFFرقم الفاتورة,التاريخ,اسم العميل,رقم الهاتف,الصنف,الكمية,سعر القطعة,إجمالي الصنف,إجمالي الفاتورة\n";
       invoices.forEach(inv => {
@@ -828,7 +822,7 @@
     $("exportProducts").addEventListener("click", () => {
       let csv = "\uFEFFاسم الصنف,السعر,المخزن,الباركود\n";
       products.forEach(p => { csv += `"${p.name}",${p.price},${p.stock},"${p.barcode || ''}"\n`; });
-      let blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      let blob = new Blob([csv], { type: "text/csv;charset=ustf-8" });
       let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Inventory_${new Date().toISOString().slice(0,10)}.csv`; a.click();
     });
 
