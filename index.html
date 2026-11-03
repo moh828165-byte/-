@@ -170,7 +170,7 @@
 
   <main>
     <div id="cloudStatus" style="padding: 6px 10px; margin-bottom: 10px; background: #e6ece8; border-radius: 6px; font-size: 12px; text-align: center;">
-      جاري الاتصال بالسحابة والتخزين المحلي...
+      جاري الاتصال بالنظام والتخزين الفوري...
     </div>
 
     <nav class="tabs no-print">
@@ -321,7 +321,6 @@
   <script>
     "use strict";
 
-    // تهيئة Firebase التلقائي مع fallback للمحلي
     const firebaseConfig = {
       apiKey: "AIzaSyDummyKeyForSaidiMall12345",
       authDomain: "saidimall-pos.firebaseapp.com",
@@ -335,7 +334,7 @@
     try {
       if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
       db = firebase.firestore();
-    } catch(e) { console.log("تخزين محلي مباشر"); }
+    } catch(e) { console.log("وضع التخزين الفوري المحلي"); }
 
     let products = JSON.parse(localStorage.getItem("sm_products") || "[]");
     let invoices = JSON.parse(localStorage.getItem("sm_invoices") || "[]");
@@ -357,7 +356,7 @@
       if(viewId === "reportsView") renderReports();
     }
 
-    // --- الكاميرا ومسح الباركود ---
+    // --- تشغيل الكاميرا للبحث ---
     let html5QrcodeScannerSale = null;
     let html5QrcodeScannerProduct = null;
 
@@ -392,7 +391,7 @@
       $("scannerContainerProduct").classList.add("hidden");
     });
 
-    // --- العرض والتحكم ---
+    // --- دوال العرض والتحديث الفوري ---
     function renderSearch() {
       const q = $("productSearch").value.trim().toLowerCase();
       const found = products.filter(p => p.name.toLowerCase().includes(q) || (p.barcode && p.barcode.toLowerCase().includes(q)));
@@ -461,7 +460,7 @@
       renderCart();
     };
 
-    // --- حفظ المنتجات بالمخزن ---
+    // --- إضافة منتج بالمخزن ---
     $("productForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const name = $("productName").value.trim();
@@ -478,14 +477,14 @@
 
       products.push(newProduct);
       saveDataLocal();
+      renderAll();
 
       if (db) {
         try { await db.collection("products").doc(newProduct.id).set(newProduct); } catch(err){}
       }
 
-      alert("✅ تم حفظ الصنف بالمخزن بنجاح!");
       e.target.reset();
-      renderAll();
+      alert("✅ تم حفظ الصنف بالمخزن وعرضه فوراً!");
     });
 
     function renderProducts() {
@@ -501,14 +500,15 @@
     }
 
     window.deleteProduct = async function(id) {
-      if(!confirm("هل أنت تأكد من حذف الصنف من المخزن؟")) return;
+      if(!confirm("هل أنت متأكد من حذف الصنف؟")) return;
       products = products.filter(p => p.id !== id);
       saveDataLocal();
-      if(db) { try{ await db.collection("products").doc(id).delete(); }catch(e){} }
       renderAll();
+
+      if(db) { try{ await db.collection("products").doc(id).delete(); }catch(e){} }
     };
 
-    // --- إتمام البيع وحفظ الفاتورة ---
+    // --- إتمام البيع ---
     $("completeSale").addEventListener("click", async () => {
       if (!cart.length) return alert("السلة فارغة!");
 
@@ -528,7 +528,6 @@
         remaining: total - paid
       };
 
-      // خصم المخزون
       cart.forEach(cItem => {
         const p = products.find(prod => prod.id === cItem.id);
         if (p) p.stock = Math.max(0, p.stock - cItem.quantity);
@@ -536,6 +535,7 @@
 
       invoices.push(invoice);
       saveDataLocal();
+      renderAll();
 
       if (db) {
         try {
@@ -552,10 +552,10 @@
       $("customerName").value = "";
       $("customerPhone").value = "";
 
-      renderAll();
       showReceipt(invoice);
     });
 
+    // --- عرض وحذف وتعديل الفواتير ---
     function renderInvoices() {
       $("invoicesList").innerHTML = invoices.length ? [...invoices].reverse().map(inv => `
         <div class="item">
@@ -564,7 +564,11 @@
             <div class="muted">${new Date(inv.date).toLocaleString("ar-EG")} | ${escapeHtml(inv.customerName)}</div>
             <div class="price">${money(inv.total)}</div>
           </div>
-          <button class="secondary" onclick="viewInvoice('${inv.id}')">عرض / طباعة</button>
+          <div style="display:flex; gap:4px;">
+            <button class="secondary" onclick="viewInvoice('${inv.id}')">عرض / طباعة</button>
+            <button class="small-button" onclick="editInvoice('${inv.id}')">✏️ تعديل</button>
+            <button class="danger" onclick="deleteInvoice('${inv.id}')">🗑️ حذف</button>
+          </div>
         </div>
       `).join("") : `<div class="empty">لا توجد فواتير محفوظة.</div>`;
     }
@@ -572,6 +576,62 @@
     window.viewInvoice = function(id) {
       const inv = invoices.find(i => i.id === id);
       if(inv) showReceipt(inv);
+    };
+
+    // دالة حذف الفاتورة مع إرجاع الكميات للمخزن
+    window.deleteInvoice = async function(id) {
+      if(!confirm("هل أنت متأكد من إلغاء وحذف هذه الفاتورة؟ سيرجع المخزون كما كان.")) return;
+      
+      const inv = invoices.find(i => i.id === id);
+      if(inv) {
+        // إرجاع الكميات للمخزن
+        inv.items.forEach(item => {
+          const p = products.find(prod => prod.id === item.id);
+          if(p) p.stock += item.quantity;
+        });
+
+        invoices = invoices.filter(i => i.id !== id);
+        saveDataLocal();
+        renderAll();
+
+        if(db) {
+          try {
+            await db.collection("invoices").doc(id).delete();
+            for (let item of inv.items) {
+              const p = products.find(prod => prod.id === item.id);
+              if(p) await db.collection("products").doc(item.id).update({ stock: p.stock });
+            }
+          } catch(e){}
+        }
+        alert("✅ تم حذف الفاتورة وإعادة الأصناف للمخزن بنجاح!");
+      }
+    };
+
+    // دالة تعديل الفاتورة (تسترجع بيانات الفاتورة للسلة للتعديل عليها)
+    window.editInvoice = function(id) {
+      const inv = invoices.find(i => i.id === id);
+      if(!inv) return;
+      if(confirm("سيتم نقل محتويات الفاتورة إلى شاشة الكاشير لتعديلها. هل تريد المتابعة؟")) {
+        // إرجاع الكميات القديمة مؤقتاً للمخزن
+        inv.items.forEach(item => {
+          const p = products.find(prod => prod.id === item.id);
+          if(p) p.stock += item.quantity;
+        });
+
+        cart = [...inv.items];
+        $("customerName").value = inv.customerName === "عميل نقدي" ? "" : inv.customerName;
+        $("customerPhone").value = inv.customerPhone === "بدون هاتف" ? "" : inv.customerPhone;
+        $("discount").value = inv.discount;
+        $("paid").value = inv.paid;
+
+        // حذف الفاتورة القديمة
+        invoices = invoices.filter(i => i.id !== id);
+        saveDataLocal();
+        renderAll();
+
+        showView("saleView");
+        renderCart();
+      }
     };
 
     function showReceipt(inv) {
@@ -635,7 +695,6 @@
       });
     };
 
-    // --- التقارير وكشف الحساب ---
     function renderReports() {
       const totalSales = invoices.reduce((s, i) => s + i.total, 0);
       const totalDiscounts = invoices.reduce((s, i) => s + i.discount, 0);
@@ -655,10 +714,9 @@
           </div>
           <div class="price" style="color:var(--red);">متبقي عليه: ${money(inv.remaining)}</div>
         </div>
-      `).join("") : `<div class="empty">لا توجد مبالغ آجمية أو مستحقات على العملاء.</div>`;
+      `).join("") : `<div class="empty">لا توجد مبالغ آجلة على العملاء.</div>`;
     }
 
-    // --- تصدير CSV المفصل ---
     $("exportInvoices").addEventListener("click", () => {
       let csv = "\uFEFFرقم الفاتورة,التاريخ,اسم العميل,رقم الهاتف,الصنف,الكمية,سعر القطعة,إجمالي الصنف,إجمالي الفاتورة,المدفوع,المتبقي\n";
       invoices.forEach(inv => {
@@ -682,7 +740,7 @@
       renderCart();
       renderProducts();
       renderInvoices();
-      $("cloudStatus").textContent = "🟢 النظام يعمل بكفاءة وجاهز لعمليات البيع (الأصناف بالمخزن: " + products.length + " | الفواتير: " + invoices.length + ")";
+      $("cloudStatus").textContent = "🟢 النظام يعمل بفاعلية والتحديث فوري (الأصناف: " + products.length + " | الفواتير: " + invoices.length + ")";
     }
 
     document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
