@@ -22,6 +22,7 @@ const REPORT_PASSWORD="1760";let db,products=[],invoices=[],cart=[],reader=null,
 const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('ar-EG',{maximumFractionDigits:2})+' ج.م';const today=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 function setStatus(msg,ok=false){$('connectionStatus').textContent=msg;$('connectionStatus').style.background=ok?'#dcfce7':'#fee2e2'}
 try{if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(()=>{});loadDataFromCloud()}catch(e){setStatus('تعذر تهيئة Firebase: '+e.message)}
+
 async function loadDataFromCloud(){if(!db)return;try{const [ps,is]=await Promise.all([db.collection('products').get(),db.collection('invoices').get()]);products=ps.docs.map(d=>({docId:d.id,...d.data()}));invoices=is.docs.map(d=>({docId:d.id,...d.data()}));updateProductSelect();renderCart();renderInventoryList();renderDailyInvoices();generateReport();setStatus(`تم الاتصال بالسحابة. الأصناف: ${products.length} — الفواتير: ${invoices.length}`,true)}catch(e){setStatus('فشل تحميل البيانات: '+e.message+' — راجع الإنترنت وقواعد Firestore');console.error(e)}}
 function switchTab(id){stopCamera();document.querySelectorAll('.content').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));$('tab-'+id).classList.add('active');$('btn-'+id).classList.add('active');if(id==='inventory')renderInventoryList();if(id==='daily'){if(!$('dailyDate').value)$('dailyDate').value=today();renderDailyInvoices()}if(id==='reports'&&$('reportsContent').style.display==='block')generateReport()}
 function updateProductSelect(){let q=$('searchBarcode').value.trim().toLowerCase();let list=products.filter(p=>!q||String(p.barcode||'').toLowerCase().includes(q)||String(p.name||'').toLowerCase().includes(q));$('productSelect').innerHTML='<option value="">اختر صنفًا</option>'+list.map(p=>`<option value="${esc(p.docId)}">${esc(p.name||'بدون اسم')} — ${money(p.price)} — المتاح ${Number(p.qty)||0}</option>`).join('')}
@@ -29,10 +30,86 @@ function addSelectedProduct(){let p=products.find(x=>x.docId===$('productSelect'
 function addProduct(p){let item=cart.find(x=>x.docId===p.docId);let already=item?item.qty:0;if(already+1>(Number(p.qty)||0)){alert('الكمية المتاحة لا تكفي. المتاح: '+(Number(p.qty)||0));return}if(item)item.qty++;else cart.push({...p,qty:1});renderCart()}
 function renderCart(){let html='';cart.forEach((p,i)=>{html+=`<div class="card"><div class="line"><b>${esc(p.name)}</b><span>${money(p.price)} × ${p.qty}</span></div><div class="row"><button onclick="changeQty(${i},-1)">−</button><button onclick="changeQty(${i},1)">+</button><button class="danger" onclick="removeCartItem(${i})">حذف</button></div></div>`});$('cartList').innerHTML=html||'<div class="small">الفاتورة فارغة</div>';let subtotal=cart.reduce((s,p)=>s+(Number(p.price)||0)*p.qty,0),discount=Math.max(0,Number($('discountVal').value)||0),total=Math.max(0,subtotal-discount),paid=Math.max(0,Number($('paidVal').value)||0);$('invoiceSummary').innerHTML=`إجمالي الأصناف: ${money(subtotal)}<br>الخصم: ${money(discount)}<br><b>الإجمالي النهائي: ${money(total)}</b><br>المدفوع: ${money(paid)}<br><b>المتبقي: ${money(Math.max(0,total-paid))} — الباقي للعميل: ${money(Math.max(0,paid-total))}</b>`}
 function changeQty(i,delta){let p=cart[i],prod=products.find(x=>x.docId===p.docId);let next=p.qty+delta;if(next<1){cart.splice(i,1)}else if(delta>0&&next>(Number(prod?.qty)||0)){alert('الكمية المتاحة لا تكفي');return}else p.qty=next;renderCart()}function removeCartItem(i){cart.splice(i,1);renderCart()}function clearCart(){if(confirm('تفريغ الفاتورة الحالية؟')){cart=[];$('discountVal').value=0;$('paidVal').value=0;$('clientName').value='';$('clientPhone').value='';renderCart()}}
-async function checkoutInvoice(){if(busy)return;if(!db){alert('قاعدة البيانات غير متاحة');return}if(!cart.length){alert('أضف أصنافًا أولًا');return}let subtotal=cart.reduce((s,p)=>s+(Number(p.price)||0)*p.qty,0),discount=Math.max(0,Number($('discountVal').value)||0);if(discount>subtotal){alert('الخصم لا يمكن أن يتجاوز إجمالي الأصناف');return}let total=subtotal-discount,paid=Math.max(0,Number($('paidVal').value)||0);const invoiceRef=db.collection('invoices').doc();const items=cart.map(p=>({productDocId:p.docId,id:p.id||null,barcode:p.barcode||'',name:p.name,price:Number(p.price)||0,qty:p.qty,lineTotal:(Number(p.price)||0)*p.qty}));let invoice={invoiceNo:invoiceRef.id.slice(-8).toUpperCase(),clientName:$('clientName').value.trim(),clientPhone:$('clientPhone').value.trim(),items,subtotal,discount,total,paid,remaining:Math.max(0,total-paid),change:Math.max(0,paid-total),createdAt:firebase.firestore.FieldValue.serverTimestamp(),date:today(),branch:'مول الصعيدي'};busy=true;setStatus('جاري حفظ الفاتورة وتحديث المخزون...');try{await db.runTransaction(async tx=>{let refs=cart.map(p=>db.collection('products').doc(p.docId));let snaps=[];for(const ref of refs)snaps.push(await tx.get(ref));snaps.forEach((snap,i)=>{if(!snap.exists)throw new Error('صنف لم يعد موجودًا بالمخزن');let qty=Number(snap.data().qty)||0;if(qty<cart[i].qty)throw new Error('الكمية غير كافية للصنف: '+(snap.data().name||''))});snaps.forEach((snap,i)=>tx.update(refs[i],{qty:(Number(snap.data().qty)||0)-cart[i].qty}));tx.set(invoiceRef,invoice)});alert('تم حفظ الفاتورة وتحديث المخزون بنجاح');printInvoice({...invoice,docId:invoiceRef.id,createdAt:new Date()});cart=[];$('discountVal').value=0;$('paidVal').value=0;$('clientName').value='';$('clientPhone').value='';await loadDataFromCloud()}catch(e){alert('لم يتم تأكيد حفظ الفاتورة: '+e.message);setStatus('فشل حفظ الفاتورة: '+e.message);console.error(e)}finally{busy=false}}
-async function saveProduct(){if(!db)return alert('قاعدة البيانات غير متاحة');let docId=$('pDocId').value,barcode=$('pBarcode').value.trim(),name=$('pName').value.trim(),price=Number($('pPrice').value),qty=Number($('pQty').value);if(!name)return alert('اكتب اسم الصنف');if(!Number.isFinite(price)||price<0||!Number.isInteger(qty)||qty<0)return alert('تأكد من السعر والكمية');try{let dup=products.find(p=>(barcode&&p.barcode===barcode||p.name?.trim().toLowerCase()===name.toLowerCase())&&p.docId!==docId);if(dup&&!docId){if(!confirm('الصنف موجود بالفعل. هل تريد إضافة الكمية وتحديث السعر؟'))return;await db.collection('products').doc(dup.docId).update({qty:(Number(dup.qty)||0)+qty,price,barcode:barcode||dup.barcode||''})}else if(docId){await db.collection('products').doc(docId).update({barcode,name,price,qty})}else{await db.collection('products').add({id:Date.now(),barcode,name,price,qty,createdAt:firebase.firestore.FieldValue.serverTimestamp()})}alert('تم الحفظ في السحابة');resetProductForm();await loadDataFromCloud()}catch(e){alert('فشل حفظ الصنف: '+e.message);setStatus('فشل حفظ الصنف: '+e.message)}}
-function editProduct(id){let p=products.find(x=>x.docId===id);if(!p)return;$('pDocId').value=p.docId;$('pBarcode').value=p.barcode||'';$('pName').value=p.name||'';$('pPrice').value=p.price??0;$('pQty').value=p.qty??0;$('saveProductBtn').textContent='حفظ التعديل';$('cancelEditBtn').style.display='block';window.scrollTo({top:0,behavior:'smooth'})}function resetProductForm(){['pDocId','pBarcode','pName','pPrice','pQty'].forEach(id=>$(id).value='');$('saveProductBtn').textContent='حفظ الصنف';$('cancelEditBtn').style.display='none'}
-async function deleteProduct(id){if(!confirm('حذف الصنف من المخزن؟ لا يمكن التراجع عن الحذف.'))return;try{await db.collection('products').doc(id).delete();await loadDataFromCloud()}catch(e){alert('تعذر حذف الصنف: '+e.message)}}
+
+async function checkoutInvoice(){
+  if(busy)return;
+  if(!db){alert('قاعدة البيانات غير متاحة');return}
+  if(!cart.length){alert('أضف أصنافًا أولًا');return}
+  let subtotal=cart.reduce((s,p)=>s+(Number(p.price)||0)*p.qty,0),discount=Math.max(0,Number($('discountVal').value)||0);
+  if(discount>subtotal){alert('الخصم لا يمكن أن يتجاوز إجمالي الأصناف');return}
+  let total=subtotal-discount,paid=Math.max(0,Number($('paidVal').value)||0);
+  const invoiceRef=db.collection('invoices').doc();
+  const items=cart.map(p=>({productDocId:p.docId,id:p.id||null,barcode:p.barcode||'',name:p.name,price:Number(p.price)||0,qty:p.qty,lineTotal:(Number(p.price)||0)*p.qty}));
+  let invoice={invoiceNo:invoiceRef.id.slice(-8).toUpperCase(),clientName:$('clientName').value.trim(),clientPhone:$('clientPhone').value.trim(),items,subtotal,discount,total,paid,remaining:Math.max(0,total-paid),change:Math.max(0,paid-total),createdAt:firebase.firestore.FieldValue.serverTimestamp(),date:today(),branch:'مول الصعيدي'};
+  busy=true;
+  setStatus('جاري حفظ الفاتورة وتحديث المخزون...');
+  try{
+    await db.runTransaction(async tx=>{
+      let refs=cart.map(p=>db.collection('products').doc(p.docId));
+      let snaps=[];
+      for(const ref of refs)snaps.push(await tx.get(ref));
+      snaps.forEach((snap,i)=>{
+        if(!snap.exists)throw new Error('صنف لم يعد موجودًا بالمخزن');
+        let qty=Number(snap.data().qty)||0;
+        if(qty<cart[i].qty)throw new Error('الكمية غير كافية للصنف: '+(snap.data().name||''))
+      });
+      snaps.forEach((snap,i)=>tx.update(refs[i],{qty:(Number(snap.data().qty)||0)-cart[i].qty}));
+      tx.set(invoiceRef,invoice)
+    });
+    alert('تم حفظ الفاتورة وتحديث المخزون بنجاح');
+    printInvoice({...invoice,docId:invoiceRef.id,createdAt:new Date()});
+    cart=[];
+    $('discountVal').value=0;
+    $('paidVal').value=0;
+    $('clientName').value='';
+    $('clientPhone').value='';
+    await loadDataFromCloud(); // تحديث تلقائي فوري
+  }catch(e){
+    alert('لم يتم تأكيد حفظ الفاتورة: '+e.message);
+    setStatus('فشل حفظ الفاتورة: '+e.message);
+    console.error(e);
+  }finally{
+    busy=false;
+  }
+}
+
+async function saveProduct(){
+  if(!db)return alert('قاعدة البيانات غير متاحة');
+  let docId=$('pDocId').value,barcode=$('pBarcode').value.trim(),name=$('pName').value.trim(),price=Number($('pPrice').value),qty=Number($('pQty').value);
+  if(!name)return alert('اكتب اسم الصنف');
+  if(!Number.isFinite(price)||price<0||!Number.isInteger(qty)||qty<0)return alert('تأكد من السعر والكمية');
+  try{
+    let dup=products.find(p=>(barcode&&p.barcode===barcode||p.name?.trim().toLowerCase()===name.toLowerCase())&&p.docId!==docId);
+    if(dup&&!docId){
+      if(!confirm('الصنف موجود بالفعل. هل تريد إضافة الكمية وتحديث السعر؟'))return;
+      await db.collection('products').doc(dup.docId).update({qty:(Number(dup.qty)||0)+qty,price,barcode:barcode||dup.barcode||''});
+    }else if(docId){
+      await db.collection('products').doc(docId).update({barcode,name,price,qty});
+    }else{
+      await db.collection('products').add({id:Date.now(),barcode,name,price,qty,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    }
+    alert('تم الحفظ في السحابة');
+    resetProductForm();
+    await loadDataFromCloud(); // تحديث تلقائي فوري
+  }catch(e){
+    alert('فشل حفظ الصنف: '+e.message);
+    setStatus('فشل حفظ الصنف: '+e.message);
+  }
+}
+
+function editProduct(id){let p=products.find(x=>x.docId===id);if(!p)return;$('pDocId').value=p.docId;$('pBarcode').value=p.barcode||'';$('pName').value=p.name||'';$('pPrice').value=p.price??0;$('pQty').value=p.qty??0;$('saveProductBtn').textContent='حفظ التعديل';$('cancelEditBtn').style.display='block';window.scrollTo({top:0,behavior:'smooth'})}
+function resetProductForm(){['pDocId','pBarcode','pName','pPrice','pQty'].forEach(id=>$(id).value='');$('saveProductBtn').textContent='حفظ الصنف';$('cancelEditBtn').style.display='none'}
+
+async function deleteProduct(id){
+  if(!confirm('حذف الصنف من المخزن؟ لا يمكن التراجع عن الحذف.'))return;
+  try{
+    await db.collection('products').doc(id).delete();
+    await loadDataFromCloud(); // تحديث تلقائي فوري
+  }catch(e){
+    alert('تعذر حذف الصنف: '+e.message);
+  }
+}
+
 function renderInventoryList(){let q=($('inventorySearch')?.value||'').trim().toLowerCase();let list=products.filter(p=>!q||String(p.name||'').toLowerCase().includes(q)||String(p.barcode||'').toLowerCase().includes(q));$('inventoryList').innerHTML=list.map(p=>`<div class="card"><div class="line"><b>${esc(p.name||'بدون اسم')}</b><span>${money(p.price)}</span></div><div class="small">باركود: ${esc(p.barcode||'—')} | الكمية: ${Number(p.qty)||0}</div><div class="row"><button onclick="editProduct('${esc(p.docId)}')">تعديل</button><button class="danger" onclick="deleteProduct('${esc(p.docId)}')">حذف</button></div></div>`).join('')||'<div class="small">لا توجد أصناف مطابقة</div>'}
 function invoiceDate(inv){if(inv.date)return String(inv.date).slice(0,10);let d=inv.createdAt?.toDate?inv.createdAt.toDate():inv.createdAt?.seconds?new Date(inv.createdAt.seconds*1000):null;return d?todayFrom(d):''}function todayFrom(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function renderDailyInvoices(){if(!$('dailyDate').value)$('dailyDate').value=today();let date=$('dailyDate').value,list=invoices.filter(i=>invoiceDate(i)===date).sort((a,b)=>String(b.invoiceNo||'').localeCompare(String(a.invoiceNo||'')));$('dailyInvoicesContainer').innerHTML=list.map(i=>invoiceCard(i)).join('')||'<div class="small">لا توجد فواتير في هذا التاريخ</div>'}
