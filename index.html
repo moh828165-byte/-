@@ -1,5 +1,3 @@
-عذراً يا غالي، يبدو أن الكود الأخير لم يظهر أو سقط منك سهواً في الرسالة السابقة.
-إليك الكود المتكامل والمحدث بالكامل لمول الصعيدي، وفيه تم اعتماد شكل الفاتورة الرسمي والمنظم جداً الذي طلبته (بالجدول المرتب: الصنف، الكمية، السعر، الإجمالي، وتفاصيل العميل، وسياسة الاستبدال والاسترجاع)، بالإضافة إلى تشغيل الكاميرا على الباركود الخطي، وإدارة المصاريف، وتقرير الواتساب المرقم:
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
@@ -220,7 +218,7 @@
         <h3>سلة الشراء</h3>
         <div id="cartList" class="cart-list"></div>
         <div class="summary">
-          <div class="summary-line"><span>الإجمالي</span><strong id="cartTotal">٠ ج.م</strong></div>
+          <div class="summary-line"><span>الإجمالي</span><strong id="cartTotal">0.00 EGP</strong></div>
           <div class="form-grid">
             <div class="field">
               <label for="discount">الخصم (ج.م)</label>
@@ -231,7 +229,7 @@
               <input id="paid" type="number" min="0" step="0.01" placeholder="اتركه فارغاً للدفع الكامل">
             </div>
           </div>
-          <div class="summary-line"><span>المطلوب بعد الخصم</span><strong id="dueTotal">٠ ج.م</strong></div>
+          <div class="summary-line"><span>المطلوب بعد الخصم</span><strong id="dueTotal">0.00 EGP</strong></div>
           <button id="completeSale" class="primary" style="width:100%;margin-top:10px;">💾 إتمام وتأكيد الفاتورة</button>
         </div>
       </div>
@@ -328,19 +326,19 @@
         <div class="form-grid">
           <div class="card">
             <div class="muted">إجمالي المبيعات</div>
-            <h3 id="repTotalSales">٠ ج.م</h3>
+            <h3 id="repTotalSales">0.00 EGP</h3>
           </div>
           <div class="card">
             <div class="muted">إجمالي المصاريف</div>
-            <h3 id="repTotalExpenses" style="color:var(--red);">٠ ج.م</h3>
+            <h3 id="repTotalExpenses" style="color:var(--red);">0.00 EGP</h3>
           </div>
           <div class="card">
             <div class="muted">صافي الدرج (الربح)</div>
-            <h3 id="repNetProfit">٠ ج.م</h3>
+            <h3 id="repNetProfit">0.00 EGP</h3>
           </div>
           <div class="card">
             <div class="muted">عدد الفواتير</div>
-            <h3 id="repInvoicesCount">٠</h3>
+            <h3 id="repInvoicesCount">0</h3>
           </div>
         </div>
         <h3 style="margin-top:15px;">المبالغ الآجلة (المتبقية على العملاء)</h3>
@@ -348,7 +346,7 @@
       </div>
     </section>
 
-    <!-- الفاتورة الرسمية المطابقة لطلبك -->
+    <!-- الفاتورة الرسمية بأرقام إنجليزية -->
     <section id="receipt" class="panel hidden"></section>
   </main>
 
@@ -361,7 +359,8 @@
     let cart = [];
 
     const $ = id => document.getElementById(id);
-    const money = v => new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP" }).format(Number(v) || 0);
+    // دالة مخصصة لضمان ظهور الأرقام بالإنجليزية دائماً
+    const money = v => Number(v || 0).toFixed(2) + " EGP";
     const escapeHtml = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
     function saveData() {
@@ -629,7 +628,7 @@
         <div class="item">
           <div>
             <div class="item-title">فاتورة ${escapeHtml(inv.id)}</div>
-            <div class="muted">${new Date(inv.date).toLocaleString("ar-EG")} | ${escapeHtml(inv.customerName)}</div>
+            <div class="muted">${new Date(inv.date).toLocaleString("en-GB")} | ${escapeHtml(inv.customerName)}</div>
             <div class="price">${money(inv.total)}</div>
           </div>
           <div style="display:flex; gap:4px;">
@@ -658,19 +657,19 @@
       }
     };
 
-    // تصميم الفاتورة الرسمي المطابق لطلبك تماماً
+    // تصميم الفاتورة الرسمية (الأرقام باللغة الإنجليزية)
     function showReceipt(inv) {
       const totalPieces = inv.items.reduce((s, i) => s + i.quantity, 0);
       const d = new Date(inv.date);
-      const dateStr = d.toLocaleDateString("ar-EG");
-      const timeStr = d.toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' });
+      const dateStr = d.toLocaleDateString("en-GB"); // YYYY/MM/DD or DD/MM/YYYY
+      const timeStr = d.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' });
 
       const tableRows = inv.items.map(i => `
         <tr>
           <td style="padding:4px 0; border-bottom:1px dashed #eee;">${escapeHtml(i.name)}</td>
           <td style="text-align:center; padding:4px 0; border-bottom:1px dashed #eee;">${i.quantity}</td>
           <td style="text-align:center; padding:4px 0; border-bottom:1px dashed #eee;">${Number(i.price).toFixed(2)}</td>
-          <td style="text-align:left; padding:4px 0; border-bottom:1px dashed #eee;">${Number(i.price * i.quantity).toFixed(2)} ج</td>
+          <td style="text-align:left; padding:4px 0; border-bottom:1px dashed #eee;">${Number(i.price * i.quantity).toFixed(2)} EGP</td>
         </tr>
       `).join("");
 
@@ -761,7 +760,7 @@
         <div class="item">
           <div>
             <div class="item-title">${escapeHtml(e.title)}</div>
-            <div class="muted">${new Date(e.date).toLocaleTimeString("ar-EG")}</div>
+            <div class="muted">${new Date(e.date).toLocaleTimeString("en-GB")}</div>
           </div>
           <div class="row">
             <span class="price" style="color:var(--red);">${money(e.amount)}</span>
@@ -805,7 +804,7 @@
       const netProfit = totalSales - totalExpenses;
 
       let report = `📊 *تقرير مبيعات مول الصعيدي اليومي*\n` +
-                   `📅 *التاريخ:* ${new Date().toLocaleDateString("ar-EG")}\n` +
+                   `📅 *التاريخ:* ${new Date().toLocaleDateString("en-GB")}\n` +
                    `-----------------------------------\n` +
                    `💰 *إجمالي المبيعات:* ${money(totalSales)}\n` +
                    `💸 *إجمالي المصاريف:* ${money(totalExpenses)}\n` +
@@ -820,7 +819,7 @@
         invoices.forEach((inv, idx) => {
           report += `*${idx + 1}. [${inv.id}] - ${inv.customerName}*\n`;
           inv.items.forEach(item => {
-            report += `   ▪️ ${item.name} | العدد: ${item.quantity} | ${money(item.price * item.quantity)}\n`;
+            report += `   ▪️ ${item.name} | Qty: ${item.quantity} | ${money(item.price * item.quantity)}\n`;
           });
           report += `   💵 *إجمالي الفاتورة:* ${money(inv.total)}\n`;
           if(idx < invoices.length - 1) report += `   ---------------------------\n`;
@@ -842,7 +841,7 @@
       let csv = "\uFEFFرقم الفاتورة,التاريخ,اسم العميل,رقم الهاتف,الصنف,الكمية,سعر القطعة,إجمالي الصنف,إجمالي الفاتورة\n";
       invoices.forEach(inv => {
         inv.items.forEach(item => {
-          csv += `"${inv.id}","${new Date(inv.date).toLocaleString('ar-EG')}","${inv.customerName}","${inv.customerPhone}","${item.name}",${item.quantity},${item.price},${item.quantity * item.price},${inv.total}\n`;
+          csv += `"${inv.id}","${new Date(inv.date).toLocaleString('en-GB')}","${inv.customerName}","${inv.customerPhone}","${item.name}",${item.quantity},${item.price},${item.quantity * item.price},${inv.total}\n`;
         });
       });
       let blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -872,4 +871,3 @@
   </script>
 </body>
 </html>
-
