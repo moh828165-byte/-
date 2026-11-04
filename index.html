@@ -179,7 +179,7 @@
       <button class="tab" data-view="productsView">📦 المخزن</button>
       <button class="tab" data-view="invoicesView">📄 الفواتير</button>
       <button class="tab" data-view="expensesView">💸 المصاريف</button>
-      <button class="tab" data-view="reportsView">📊 تقرير اليوم الشامل</button>
+      <button class="tab" data-view="reportsView">📊 التقارير وكشف الحساب</button>
     </nav>
 
     <!-- شاشة الكاشير -->
@@ -277,7 +277,7 @@
       </div>
     </section>
 
-    <!-- شاشة الفواتير والبحث وفلترة الأيام ومشاركة الفواتير -->
+    <!-- شاشة الفواتير والبحث وفلترة الأيام -->
     <section id="invoicesView" class="view hidden">
       <div class="panel">
         <h2>سجل الفواتير حسب اليوم والبحث</h2>
@@ -325,24 +325,36 @@
       </div>
     </section>
 
-    <!-- شاشة تقرير اليوم الشامل (المبيعات، المصاريف، الصافي وتفاصيل الفواتير) -->
+    <!-- شاشة التقارير (مع أزرار الفترة: اليوم، هذا الشهر، كل الفترة، ومن تاريخ إلى تاريخ) -->
     <section id="reportsView" class="view hidden">
       <div class="panel">
-        <h2>📊 تقرير اليوم الشامل (المبيعات والمصاريف وصافي الدرج)</h2>
+        <h2>📊 تقارير المبيعات وكشف الحساب بالفترة</h2>
+        
+        <!-- أزرار الاختيار السريع للفترات اللي طلبتها -->
+        <div style="display:flex; gap:6px; margin-bottom:10px;" class="no-print">
+          <button class="small-button primary" onclick="setReportPeriod('today')">اليوم</button>
+          <button class="small-button secondary" onclick="setReportPeriod('month')">هذا الشهر</button>
+          <button class="small-button secondary" onclick="setReportPeriod('all')">كل الفترة</button>
+        </div>
+
         <div class="form-grid" style="margin-bottom:12px;">
-          <div class="field full">
-            <label for="reportDate">اختر اليوم المطلوب مراجعته:</label>
-            <input id="reportDate" type="date" onchange="renderReports()">
+          <div class="field">
+            <label for="startDate">من تاريخ</label>
+            <input id="startDate" type="date" onchange="renderReports()">
+          </div>
+          <div class="field">
+            <label for="endDate">إلى تاريخ</label>
+            <input id="endDate" type="date" onchange="renderReports()">
           </div>
         </div>
 
         <div class="form-grid">
           <div class="card">
-            <div class="muted">إجمالي مبيعات اليوم</div>
+            <div class="muted">إجمالي المبيعات</div>
             <h3 id="repTotalSales">0.00 EGP</h3>
           </div>
           <div class="card">
-            <div class="muted">إجمالي مصاريف اليوم</div>
+            <div class="muted">إجمالي المصاريف</div>
             <h3 id="repTotalExpenses" style="color:var(--red);">0.00 EGP</h3>
           </div>
           <div class="card">
@@ -350,23 +362,23 @@
             <h3 id="repNetProfit">0.00 EGP</h3>
           </div>
           <div class="card">
-            <div class="muted">عدد فواتير اليوم</div>
+            <div class="muted">عدد الفواتير</div>
             <h3 id="repInvoicesCount">0</h3>
           </div>
         </div>
 
         <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
-          <h3>تفاصيل حركات هذا اليوم (فواتير ومصاريف)</h3>
-          <button class="primary" onclick="shareReportImage()">📱 مشاركة تقرير اليوم كصورة واتساب</button>
+          <h3>تفاصيل حركات الفترة (المبيعات والمصاريف)</h3>
+          <button class="primary" onclick="shareReportImage()">📱 مشاركة التقرير كصورة واتساب</button>
         </div>
         <div id="reportDetailsList" class="invoice-list" style="margin-top:10px;"></div>
       </div>
 
-      <!-- عنصر مخفي لتوليد صورة تقرير اليوم الشامل للواتساب -->
+      <!-- عنصر مخفي لتوليد صورة التقرير للواتساب -->
       <div id="printableReportCard" style="display:none; background:#fff; padding:20px; width:450px; font-family:monospace; direction:rtl;">
         <div style="text-align:center;">
           <h2 style="margin:0; font-size:22px;">مول الصعيدي</h2>
-          <div style="font-size:13px; color:#555;">تقرير الحساب اليومي الشامل</div>
+          <div style="font-size:13px; color:#555;">تقرير مبيعات وكشف حساب شامل</div>
           <div id="repRangeText" style="font-size:12px; margin-top:4px; font-weight:bold;"></div>
         </div>
         <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
@@ -424,8 +436,8 @@
       document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === viewId));
       $("receipt").classList.add("hidden");
       if(viewId === "reportsView") {
-        if(!$("reportDate").value) $("reportDate").value = new Date().toISOString().slice(0, 10);
-        renderReports();
+        if(!$("startDate").value) setReportPeriod('today');
+        else renderReports();
       }
       if(viewId === "expensesView") renderExpenses();
       if(viewId === "invoicesView") {
@@ -798,13 +810,22 @@
           </div>
         </div>
         <div class="actions no-print" style="margin-top:12px; display:flex; justify-content:center; gap:8px;">
-          <button class="primary" onclick="window.print()">🖨️ طباعة الإيصال</button>
+          <button class="primary" onclick="safePrintReceipt()">🖨️ طباعة أو حفظ الفاتورة</button>
           <button class="secondary" onclick="shareReceiptImage()">📱 مشاركة الفاتورة صورة واتساب</button>
         </div>
       `;
       $("receipt").classList.remove("hidden");
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
+
+    // دالة طباعة مدعومة لتطبيقات الويب (تتخطى مشاكل حظر النافذة في PWA)
+    window.safePrintReceipt = function() {
+      try {
+        window.print();
+      } catch(e) {
+        shareReceiptImage();
+      }
+    };
 
     window.shareReceiptImage = function() {
       html2canvas($("receiptContent"), { scale: 2 }).then(canvas => {
@@ -859,7 +880,7 @@
       });
     };
 
-    // --- تسجيل المصاريف مع تاريخ ووقت تلقائي ---
+    // --- إدارة المصاريف بالتاريخ والوقت ---
     $("expenseForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const title = $("expenseTitle").value.trim();
@@ -893,93 +914,100 @@
       renderExpenses();
     };
 
-    // --- تقرير اليوم الشامل (مبيعات، مصاريف، صافي وتفاصيل الفواتير) ---
+    // --- إدارة الفترات والتقارير وكشف الحساب الشامل ---
+    window.setReportPeriod = function(type) {
+      const now = new Date();
+      let start = "", end = "";
+      
+      if(type === 'today') {
+        start = end = now.toISOString().slice(0, 10);
+      } else if(type === 'month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+        end = now.toISOString().slice(0, 10);
+      } else if(type === 'all') {
+        start = "2020-01-01";
+        end = now.toISOString().slice(0, 10);
+      }
+      
+      $("startDate").value = start;
+      $("endDate").value = end;
+      renderReports();
+    };
+
     function renderReports() {
-      const dateVal = $("reportDate").value;
-      if(!dateVal) return;
+      const startStr = $("startDate").value;
+      const endStr = $("endDate").value;
+      
+      const startTime = startStr ? new Date(startStr).setHours(0,0,0,0) : 0;
+      const endTime = endStr ? new Date(endStr).setHours(23,59,59,999) : Date.now();
 
-      const startTime = new Date(dateVal).setHours(0,0,0,0);
-      const endTime = new Date(dateVal).setHours(23,59,59,999);
-
-      const dayInvoices = invoices.filter(inv => {
+      const filteredInvoices = invoices.filter(inv => {
         const t = new Date(inv.date).getTime();
         return t >= startTime && t <= endTime;
       });
 
-      const dayExpenses = expenses.filter(exp => {
+      const filteredExpenses = expenses.filter(exp => {
         const t = new Date(exp.date).getTime();
         return t >= startTime && t <= endTime;
       });
 
-      const totalSales = dayInvoices.reduce((s, i) => s + i.total, 0);
-      const totalExpenses = dayExpenses.reduce((s, e) => s + e.amount, 0);
+      const totalSales = filteredInvoices.reduce((s, i) => s + i.total, 0);
+      const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
       const netProfit = totalSales - totalExpenses;
 
       $("repTotalSales").textContent = money(totalSales);
       $("repTotalExpenses").textContent = money(totalExpenses);
       $("repNetProfit").textContent = money(netProfit);
-      $("repInvoicesCount").textContent = dayInvoices.length;
+      $("repInvoicesCount").textContent = filteredInvoices.length;
 
-      // عرض الحركات في الواجهة
+      // دمج عرض الفواتير والمصاريف في تفاصيل حركات الفترة
       let detailsHtml = "";
-      if(dayInvoices.length > 0) {
-        detailsHtml += `<b>📄 فواتير اليوم (${dayInvoices.length}):</b><br>`;
-        dayInvoices.forEach((inv, idx) => {
-          detailsHtml += `
-            <div class="item" style="margin-top:6px;">
-              <div>
-                <div class="item-title">${idx + 1}. [${inv.id}] - ${escapeHtml(inv.customerName)}</div>
-                <div class="muted">${new Date(inv.date).toLocaleTimeString("en-GB")} | القطع: ${inv.items.reduce((s,i)=>s+i.quantity,0)}</div>
-              </div>
-              <div class="price">${money(inv.total)}</div>
+      filteredInvoices.forEach((inv, idx) => {
+        detailsHtml += `
+          <div class="item">
+            <div>
+              <div class="item-title">${idx + 1}. [فاتورة: ${inv.id}] - ${escapeHtml(inv.customerName)}</div>
+              <div class="muted">${new Date(inv.date).toLocaleString("en-GB")} | القطع: ${inv.items.reduce((s,i)=>s+i.quantity,0)}</div>
             </div>
-          `;
-        });
-      }
-      if(dayExpenses.length > 0) {
-        detailsHtml += `<br><b>💸 مصاريف اليوم (${dayExpenses.length}):</b><br>`;
-        dayExpenses.forEach((exp, idx) => {
-          detailsHtml += `
-            <div class="item" style="margin-top:6px; border-color:#f8d7da;">
-              <div>
-                <div class="item-title">${idx + 1}. ${escapeHtml(exp.title)}</div>
-                <div class="muted">${new Date(exp.date).toLocaleTimeString("en-GB")}</div>
-              </div>
-              <div class="price" style="color:var(--red);">${money(exp.amount)}</div>
+            <div class="price">${money(inv.total)}</div>
+          </div>
+        `;
+      });
+      filteredExpenses.forEach((exp, idx) => {
+        detailsHtml += `
+          <div class="item" style="border-color:#f8d7da;">
+            <div>
+              <div class="item-title">💸 [مصروف]: ${escapeHtml(exp.title)}</div>
+              <div class="muted">${new Date(exp.date).toLocaleString("en-GB")}</div>
             </div>
-          `;
-        });
-      }
-      if(dayInvoices.length === 0 && dayExpenses.length === 0) {
-        detailsHtml = `<div class="empty">لا توجد حركات (مبيعات أو مصاريف) مسجلة في هذا اليوم.</div>`;
-      }
+            <div class="price" style="color:var(--red);">${money(exp.amount)}</div>
+          </div>
+        `;
+      });
 
-      $("reportDetailsList").innerHTML = detailsHtml;
+      $("reportDetailsList").innerHTML = detailsHtml || `<div class="empty">لا توجد حركات في هذه الفترة.</div>`;
 
-      // تجهيز كارت صورة التقرير الشامل للواتساب
-      $("repRangeText").textContent = `تاريخ اليوم: ${dateVal}`;
+      // تجهيز كارت صورة التقرير للواتساب
+      $("repRangeText").textContent = `الفترة: ${startStr || 'البداية'} إلى ${endStr || 'الآن'}`;
       $("imgRepSales").textContent = money(totalSales);
       $("imgRepExp").textContent = money(totalExpenses);
       $("imgRepNet").textContent = money(netProfit);
-      $("imgRepCount").textContent = dayInvoices.length;
+      $("imgRepCount").textContent = filteredInvoices.length;
 
-      let imgItemsHtml = "";
-      if(dayInvoices.length > 0) {
-        imgItemsHtml += `<b>الفواتير:</b><br>`;
-        dayInvoices.forEach((inv, i) => {
-          imgItemsHtml += `${i+1}. ${inv.id} (${inv.customerName}) — ${money(inv.total)}<br>`;
+      let itemsHtml = "";
+      if(filteredInvoices.length > 0) {
+        itemsHtml += `<b>الفواتير:</b><br>`;
+        filteredInvoices.forEach((inv, i) => {
+          itemsHtml += `${i+1}. ${inv.id} (${inv.customerName}) — ${money(inv.total)}<br>`;
         });
       }
-      if(dayExpenses.length > 0) {
-        imgItemsHtml += `<br><b>المصاريف:</b><br>`;
-        dayExpenses.forEach((e, i) => {
-          imgItemsHtml += `${i+1}. ${e.title} — ${money(e.amount)}<br>`;
+      if(filteredExpenses.length > 0) {
+        itemsHtml += `<br><b>المصاريف:</b><br>`;
+        filteredExpenses.forEach((e, i) => {
+          itemsHtml += `${i+1}. ${e.title} — ${money(e.amount)}<br>`;
         });
       }
-      if(dayInvoices.length === 0 && dayExpenses.length === 0) {
-        imgItemsHtml = `لا توجد حركات في هذا اليوم.`;
-      }
-      $("imgRepItemsList").innerHTML = imgItemsHtml;
+      $("imgRepItemsList").innerHTML = itemsHtml || `لا توجد حركات.`;
     }
 
     window.shareReportImage = function() {
@@ -988,12 +1016,12 @@
       html2canvas(card, { scale: 2 }).then(canvas => {
         card.style.display = "none";
         canvas.toBlob(blob => {
-          let file = new File([blob], "daily_report.png", { type: "image/png" });
+          let file = new File([blob], "report.png", { type: "image/png" });
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({ files: [file], title: 'تقرير يوم مول الصعيدي' });
+            navigator.share({ files: [file], title: 'تقرير مبيعات مول الصعيدي' });
           } else {
-            let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'SaidiMall_Daily_Report.png'; a.click();
-            alert("تم حفظ صورة تقرير اليوم على جهازك.");
+            let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'SaidiMall_Report.png'; a.click();
+            alert("تم حفظ صورة التقرير على جهازك.");
           }
         });
       });
