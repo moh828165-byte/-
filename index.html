@@ -166,9 +166,9 @@
 
   <main>
     <div id="systemStatus" style="padding: 6px 10px; margin-bottom: 10px; background: #e6ece8; border-radius: 6px; font-size: 12px; display:flex; justify-content:space-between; align-items:center;" class="no-print">
-      <span>🟢 النظام المحلي يعمل بكفاءة تامة</span>
+      <span>🟢 النظام المحلي يعمل بكفاءة تامة[span_1](start_span)[span_1](end_span)</span>
       <div>
-        <button class="small-button" onclick="exportBackup()">📥 تصدير نسخة</button>
+        <button class="small-button" onclick="exportBackup()">📥 تصدير نسخة[span_2](start_span)[span_2](end_span)</button>
         <button class="small-button" onclick="$('importFile').click()">📤 استعادة</button>
         <input type="file" id="importFile" class="hidden" accept=".json" onchange="importBackup(event)">
       </div>
@@ -180,58 +180,58 @@
       <button class="tab" data-view="invoicesView">📄 الفواتير</button>
       <button class="tab" data-view="returnsView">🔄 المرتجعات</button>
       <button class="tab" data-view="expensesView">💸 المصاريف</button>
-      <button class="tab" data-view="reportsView">📊 التقارير</button>
+      <button class="tab" data-view="reportsView">📊 التقارير والأصناف الأكثر مبيعاً</button>
     </nav>
 
     <!-- شاشة الكاشير -->
     <section id="saleView" class="view">
       <div class="panel">
-        <h2>عملية بيع جديدة</h2>
+        <h2>عملية بيع جديدة[span_3](start_span)[span_3](end_span)</h2>
         <div class="form-grid">
           <div class="field full">
-            <label for="productSearch">ابحث بالاسم أو امسح الباركود الخطي</label>
+            <label for="productSearch">ابحث بالاسم أو امسح الباركود الخطي[span_4](start_span)[span_4](end_span)</label>
             <div style="display:flex; gap:6px;">
-              <input id="productSearch" autocomplete="off" placeholder="اسم المنتج أو الباركود">
-              <button type="button" class="secondary" id="btnScanSale">📸 كاميرا الباركود</button>
+              <input id="productSearch" autocomplete="off" placeholder="اسم المنتج أو الباركود[span_5](start_span)[span_5](end_span)">
+              <button type="button" class="secondary" id="btnScanSale">📸 كاميرا الباركود[span_6](start_span)[span_6](end_span)</button>
             </div>
           </div>
           <div id="scannerContainerSale" class="full hidden">
             <div id="readerSale"></div>
-            <button type="button" class="danger" id="btnCloseScannerSale" style="width:100%; margin-top:5px;">إغلاق الكاميرا</button>
+            <button type="button" class="danger" id="btnCloseScannerSale" style="width:100%; margin-top:5px;">إغلاق الكاميرا[span_7](start_span)[span_7](end_span)</button>
           </div>
           <div class="field">
-            <label for="customerName">اسم العميل</label>
-            <input id="customerName" placeholder="عميل نقدي">
+            <label for="customerName">اسم العميل[span_8](start_span)[span_8](end_span)</label>
+            <input id="customerName" placeholder="عميل نقدي[span_9](start_span)[span_9](end_span)">
           </div>
           <div class="field">
-            <label for="customerPhone">رقم الهاتف</label>
-            <input id="customerPhone" inputmode="numeric" placeholder="مثال: 010XXXXXXXX">
+            <label for="customerPhone">رقم الهاتف[span_10](start_span)[span_10](end_span)</label>
+            <input id="customerPhone" inputmode="numeric" placeholder="مثال: 010XXXXXXXX[span_11](start_span)[span_11](end_span)">
           </div>
         </div>
       </div>
 
       <div class="panel">
-        <h3>نتائج البحث</h3>
+        <h3>نتائج البحث[span_12](start_span)[span_12](end_span)</h3>
         <div id="searchResults" class="product-list"></div>
       </div>
 
       <div class="panel">
-        <h3>سلة الشراء</h3>
+        <h3>سلة الشراء[span_13](start_span)[span_13](end_span)</h3>
         <div id="cartList" class="cart-list"></div>
         <div class="summary">
-          <div class="summary-line"><span>الإجمالي</span><strong id="cartTotal">0.00 EGP</strong></div>
+          <div class="summary-line"><span>الإجمالي[span_14](start_span)[span_14](end_span)</span><strong id="cartTotal">0.00 EGP</strong></div>
           <div class="form-grid">
             <div class="field">
-              <label for="discount">الخصم (ج.م)</label>
+              <label for="discount">الخصم (ج.م)[span_15](start_span)[span_15](end_span)</label>
               <input id="discount" type="number" min="0" step="0.01" value="0">
             </div>
             <div class="field">
-              <label for="paid">المبلغ المدفوع</label>
-              <input id="paid" type="number" min="0" step="0.01" placeholder="اتركه فارغاً للدفع الكامل">
+              <label for="paid">المبلغ المدفوع[span_16](start_span)[span_16](end_span)</label>
+              <input id="paid" type="number" min="0" step="0.01" placeholder="اتركه فارغاً للدفع الكامل[span_17](start_span)[span_17](end_span)">
             </div>
           </div>
-          <div class="summary-line"><span>المطلوب بعد الخصم</span><strong id="dueTotal">0.00 EGP</strong></div>
-          <button id="completeSale" class="primary" style="width:100%;margin-top:10px;">💾 إتمام وتأكيد الفاتورة</button>
+          <div class="summary-line"><span>المطلوب بعد الخصم[span_18](start_span)[span_18](end_span)</span><strong id="dueTotal">0.00 EGP</strong></div>
+          <button id="completeSale" class="primary" style="width:100%;margin-top:10px;">💾 إتمام وتأكيد الفاتورة[span_19](start_span)[span_19](end_span)</button>
         </div>
       </div>
     </section>
@@ -239,75 +239,75 @@
     <!-- شاشة المخزن -->
     <section id="productsView" class="view hidden">
       <div class="panel">
-        <h2 id="productFormTitle">إضافة صنف جديد للمخزن</h2>
+        <h2 id="productFormTitle">إضافة صنف جديد للمخزن[span_20](start_span)[span_20](end_span)</h2>
         <form id="productForm" class="form-grid">
           <input type="hidden" id="editingProductId">
           <div class="field">
-            <label for="productName">اسم الصنف / المنتج</label>
-            <input id="productName" required placeholder="مثال: طقم أطفال 3 قطعة">
+            <label for="productName">اسم الصنف / المنتج[span_21](start_span)[span_21](end_span)</label>
+            <input id="productName" required placeholder="مثال: طقم أطفال 3 قطعة[span_22](start_span)[span_22](end_span)">
           </div>
           <div class="field">
-            <label for="productPrice">سعر البيع (ج.م)</label>
+            <label for="productPrice">سعر البيع (ج.م)[span_23](start_span)[span_23](end_span)</label>
             <input id="productPrice" required type="number" min="0" step="0.01">
           </div>
           <div class="field">
-            <label for="productStock">الكمية بالمخزن</label>
+            <label for="productStock">الكمية بالمخزن[span_24](start_span)[span_24](end_span)</label>
             <input id="productStock" required type="number" min="0" step="1">
           </div>
           <div class="field">
-            <label for="productBarcode">الباركود الخطي</label>
+            <label for="productBarcode">الباركود الخطي[span_25](start_span)[span_25](end_span)</label>
             <div style="display:flex; gap:4px;">
-              <input id="productBarcode" placeholder="مسح أو إدخال الباركود">
-              <button type="button" class="secondary" id="btnScanProduct">📸 كاميرا</button>
+              <input id="productBarcode" placeholder="مسح أو إدخال الباركود[span_26](start_span)[span_26](end_span)">
+              <button type="button" class="secondary" id="btnScanProduct">📸 كاميرا[span_27](start_span)[span_27](end_span)</button>
             </div>
           </div>
           <div id="scannerContainerProduct" class="full hidden">
             <div id="readerProduct"></div>
-            <button type="button" class="danger" id="btnCloseScannerProduct" style="width:100%; margin-top:5px;">إغلاق الكاميرا</button>
+            <button type="button" class="danger" id="btnCloseScannerProduct" style="width:100%; margin-top:5px;">إغلاق الكاميرا[span_28](start_span)[span_28](end_span)</button>
           </div>
           <div class="actions full">
-            <button class="primary" type="submit" id="saveProductBtn">💾 حفظ الصنف</button>
-            <button type="button" id="cancelEditBtn" class="secondary hidden" onclick="cancelEditProduct()">إلغاء التعديل</button>
+            <button class="primary" type="submit" id="saveProductBtn">💾 حفظ الصنف[span_29](start_span)[span_29](end_span)</button>
+            <button type="button" id="cancelEditBtn" class="secondary hidden" onclick="cancelEditProduct()">إلغاء التعديل[span_30](start_span)[span_30](end_span)</button>
           </div>
         </form>
       </div>
 
       <div class="panel">
-        <h2>قائمة أصناف المخزن</h2>
+        <h2>قائمة أصناف المخزن[span_31](start_span)[span_31](end_span)</h2>
         <div id="productsList" class="product-list"></div>
       </div>
     </section>
 
-    <!-- شاشة الفواتير والبحث وفلترة الأيام -->
+    <!-- شاشة الفواتير -->
     <section id="invoicesView" class="view hidden">
       <div class="panel">
-        <h2>سجل الفواتير حسب اليوم والبحث</h2>
+        <h2>سجل الفواتير حسب اليوم والبحث[span_32](start_span)[span_32](end_span)</h2>
         <div class="form-grid" style="margin-bottom:10px;">
           <div class="field">
-            <label for="filterDate">عرض فواتير يوم:</label>
+            <label for="filterDate">عرض فواتير يوم:[span_33](start_span)[span_33](end_span)</label>
             <input id="filterDate" type="date" onchange="renderInvoices()">
           </div>
           <div class="field" style="display:flex; align-items:flex-end;">
-            <button class="secondary" style="width:100%;" onclick="clearDateFilter()">عرض كل الأيام</button>
+            <button class="secondary" style="width:100%;" onclick="clearDateFilter()">عرض كل الأيام[span_34](start_span)[span_34](end_span)</button>
           </div>
         </div>
         <div class="field full" style="margin-bottom:10px;">
-          <input id="invoiceSearch" autocomplete="off" placeholder="🔍 ابحث برقم الفاتورة، اسم العميل، رقم الهاتف، أو اسم الصنف..." oninput="renderInvoices()">
+          <input id="invoiceSearch" autocomplete="off" placeholder="🔍 ابحث برقم الفاتورة، اسم العميل، رقم الهاتف، أو اسم الصنف...[span_35](start_span)[span_35](end_span)" oninput="renderInvoices()">
         </div>
         <div class="actions" style="margin-bottom:12px;">
-          <button class="primary" onclick="shareDayInvoicesImage()">📱 مشاركة فواتير اليوم المحدد كصورة واتساب</button>
+          <button class="primary" onclick="shareDayInvoicesImage()">📱 مشاركة فواتير اليوم المحدد كصورة واتساب[span_36](start_span)[span_36](end_span)</button>
         </div>
         <div id="invoicesList" class="invoice-list"></div>
       </div>
     </section>
 
-    <!-- شاشة المرتجعات الجديدة -->
+    <!-- شاشة المرتجعات (جزئي أو كامل) -->
     <section id="returnsView" class="view hidden">
       <div class="panel">
-        <h2>🔄 قسم إدارة المرتجعات</h2>
+        <h2>🔄 قسم إدارة المرتجعات (بالقطعة أو الفاتورة كاملة)</h2>
         <div class="field full" style="margin-bottom:10px;">
-          <label for="returnSearchInput">ابحث برقم الفاتورة أو اسم العميل لعمل مرتجع:</label>
-          <input id="returnSearchInput" autocomplete="off" placeholder="ادخل رقم الفاتورة (مثال: INV_...) أو اسم العميل..." oninput="renderReturnSearch()">
+          <label for="returnSearchInput">ابحث برقم الفاتورة أو اسم العميل:</label>
+          <input id="returnSearchInput" autocomplete="off" placeholder="ادخل رقم الفاتورة (INV_...) أو اسم العميل..." oninput="renderReturnSearch()">
         </div>
         <div id="returnSearchResults" class="invoice-list"></div>
       </div>
@@ -321,53 +321,53 @@
     <!-- شاشة المصاريف اليومية -->
     <section id="expensesView" class="view hidden">
       <div class="panel">
-        <h2>💸 تسجيل المصاريف اليومية</h2>
+        <h2>💸 تسجيل المصاريف اليومية[span_37](start_span)[span_37](end_span)</h2>
         <form id="expenseForm" class="form-grid">
           <div class="field">
-            <label for="expenseTitle">بيان المصروف</label>
-            <input id="expenseTitle" required placeholder="مثال: فاتورة كهرباء، نثريات...">
+            <label for="expenseTitle">بيان المصروف[span_38](start_span)[span_38](end_span)</label>
+            <input id="expenseTitle" required placeholder="مثال: فاتورة كهرباء، نثريات...[span_39](start_span)[span_39](end_span)">
           </div>
           <div class="field">
-            <label for="expenseAmount">المبلغ (ج.م)</label>
-            <input id="expenseAmount" required type="number" min="0" step="0.01" placeholder="0.00">
+            <label for="expenseAmount">المبلغ (ج.م)[span_40](start_span)[span_40](end_span)</label>
+            <input id="expenseAmount" required type="number" min="0" step="0.01" placeholder="0.00[span_41](start_span)[span_41](end_span)">
           </div>
           <div class="actions full">
-            <button class="primary" type="submit">➕ تسجيل المصروف</button>
+            <button class="primary" type="submit">➕ تسجيل المصروف[span_42](start_span)[span_42](end_span)</button>
           </div>
         </form>
       </div>
 
       <div class="panel">
-        <h2>سجل المصاريف</h2>
+        <h2>سجل المصاريف[span_43](start_span)[span_43](end_span)</h2>
         <div id="expensesList" class="product-list"></div>
       </div>
     </section>
 
-    <!-- شاشة التقارير (مع خصم المرتجعات أوتوماتيك) -->
+    <!-- شاشة التقارير والأصناف الأكثر مبيعاً -->
     <section id="reportsView" class="view hidden">
       <div class="panel">
-        <h2>📊 تقارير المبيعات وكشف الحساب بالفترة</h2>
+        <h2>📊 تقارير المبيعات والمرتجعات والأصناف الأكثر مبيعاً</h2>
         
         <div style="display:flex; gap:6px; margin-bottom:10px;" class="no-print">
-          <button class="small-button primary" onclick="setReportPeriod('today')">اليوم</button>
-          <button class="small-button secondary" onclick="setReportPeriod('month')">هذا الشهر</button>
-          <button class="small-button secondary" onclick="setReportPeriod('all')">كل الفترة</button>
+          <button class="small-button primary" onclick="setReportPeriod('today')">اليوم[span_44](start_span)[span_44](end_span)</button>
+          <button class="small-button secondary" onclick="setReportPeriod('month')">هذا الشهر[span_45](start_span)[span_45](end_span)</button>
+          <button class="small-button secondary" onclick="setReportPeriod('all')">كل الفترة[span_46](start_span)[span_46](end_span)</button>
         </div>
 
         <div class="form-grid" style="margin-bottom:12px;">
           <div class="field">
-            <label for="startDate">من تاريخ</label>
+            <label for="startDate">من تاريخ[span_47](start_span)[span_47](end_span)</label>
             <input id="startDate" type="date" onchange="renderReports()">
           </div>
           <div class="field">
-            <label for="endDate">إلى تاريخ</label>
+            <label for="endDate">إلى تاريخ[span_48](start_span)[span_48](end_span)</label>
             <input id="endDate" type="date" onchange="renderReports()">
           </div>
         </div>
 
         <div class="form-grid">
           <div class="card">
-            <div class="muted">إجمالي المبيعات</div>
+            <div class="muted">إجمالي المبيعات[span_49](start_span)[span_49](end_span)</div>
             <h3 id="repTotalSales">0.00 EGP</h3>
           </div>
           <div class="card">
@@ -375,26 +375,32 @@
             <h3 id="repTotalReturns" style="color:var(--red);">0.00 EGP</h3>
           </div>
           <div class="card">
-            <div class="muted">إجمالي المصاريف</div>
+            <div class="muted">إجمالي المصاريف[span_50](start_span)[span_50](end_span)</div>
             <h3 id="repTotalExpenses" style="color:var(--red);">0.00 EGP</h3>
           </div>
           <div class="card">
-            <div class="muted">صافي الدرج (الربح)</div>
+            <div class="muted">صافي الدرج (الربح)[span_51](start_span)[span_51](end_span)</div>
             <h3 id="repNetProfit">0.00 EGP</h3>
           </div>
         </div>
 
+        <!-- قسم الأصناف الأكثر مبيعاً -->
+        <div class="card" style="margin-top:12px; background:#f9fbfa;">
+          <h3 style="margin-bottom:8px;">🔥 الأصناف الأكثر مبيعاً خلال هذه الفترة</h3>
+          <div id="topSellingList" style="font-size:13px;"></div>
+        </div>
+
         <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
-          <h3>تفاصيل حركات الفترة (مبيعات، مرتجعات، مصاريف)</h3>
-          <button class="primary" onclick="shareReportImage()">📱 مشاركة التقرير كصورة واتساب</button>
+          <h3>تفاصيل حركات الفترة[span_52](start_span)[span_52](end_span)</h3>
+          <button class="primary" onclick="shareReportImage()">📱 مشاركة التقرير كصورة واتساب[span_53](start_span)[span_53](end_span)</button>
         </div>
         <div id="reportDetailsList" class="invoice-list" style="margin-top:10px;"></div>
       </div>
 
       <div id="printableReportCard" style="display:none; background:#fff; padding:20px; width:450px; font-family:monospace; direction:rtl;">
         <div style="text-align:center;">
-          <h2 style="margin:0; font-size:22px;">مول الصعيدي</h2>
-          <div style="font-size:13px; color:#555;">تقرير مبيعات وكشف حساب شامل</div>
+          <h2 style="margin:0; font-size:22px;">مول الصعيدي[span_54](start_span)[span_54](end_span)</h2>
+          <div style="font-size:13px; color:#555;">تقرير مبيعات وكشف حساب شامل[span_55](start_span)[span_55](end_span)</div>
           <div id="repRangeText" style="font-size:12px; margin-top:4px; font-weight:bold;"></div>
         </div>
         <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
@@ -405,26 +411,28 @@
           <div>📉 صافي الدرج (الربح): <strong id="imgRepNet"></strong></div>
         </div>
         <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+        <div style="font-size:12px;" id="imgTopSellingPrint"></div>
+        <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
         <div style="font-size:12px;" id="imgRepItemsList"></div>
         <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
-        <div style="text-align:center; font-size:11px; color:#555;">مول الصعيدي للإدارة والتحكم 🙏</div>
+        <div style="text-align:center; font-size:11px; color:#555;">مول الصعيدي للإدارة والتحكم 🙏[span_56](start_span)[span_56](end_span)</div>
       </div>
     </section>
 
     <!-- عنصر مخفي لتوليد صورة فواتير اليوم المحدد -->
     <div id="printableDayInvoicesCard" style="display:none; background:#fff; padding:20px; width:450px; font-family:monospace; direction:rtl;">
       <div style="text-align:center;">
-        <h2 style="margin:0; font-size:22px;">مول الصعيدي</h2>
-        <div style="font-size:13px; color:#555;">ملخص فواتير يوم</div>
+        <h2 style="margin:0; font-size:22px;">مول الصعيدي[span_57](start_span)[span_57](end_span)</h2>
+        <div style="font-size:13px; color:#555;">ملخص فواتير يوم[span_58](start_span)[span_58](end_span)</div>
         <div id="imgDayTitle" style="font-size:14px; margin-top:4px; font-weight:bold;"></div>
       </div>
       <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
       <div style="font-size:12px;" id="imgDayInvoicesContent"></div>
       <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
-      <div style="text-align:center; font-size:11px; color:#555;">مول الصعيدي للإدارة والتحكم 🙏</div>
+      <div style="text-align:center; font-size:11px; color:#555;">مول الصعيدي للإدارة والتحكم 🙏[span_59](start_span)[span_59](end_span)</div>
     </div>
 
-    <!-- الفاتورة الرسمية أو إيصال المرتجع -->
+    <!-- الفاتورة الرسمية -->
     <section id="receipt" class="panel hidden"></section>
   </main>
 
@@ -490,12 +498,12 @@
             expenses = data.expenses || [];
             returns = data.returns || [];
             saveData();
-            alert("✅ تمت استعادة النسخة الاحتياطية بنجاح!");
+            alert("✅ تمت استعادة النسخة الاحتياطية بنجاح[span_60](start_span)[span_60](end_span)!");
           } else {
-            alert("❌ الملف غير صالح.");
+            alert("❌ الملف غير صالح.[span_61](start_span)[span_61](end_span)");
           }
         } catch(err) {
-          alert("❌ خطأ في قراءة الملف.");
+          alert("❌ خطأ في قراءة الملف.[span_62](start_span)[span_62](end_span)");
         }
       };
       reader.readAsText(file);
@@ -562,11 +570,11 @@
       if(id) {
         const p = products.find(item => item.id === id);
         if(p) { p.name = name; p.price = price; p.stock = stock; p.barcode = barcode; }
-        alert("✅ تم تحديث الصنف بنجاح!");
+        alert("✅ تم تحديث الصنف بنجاح[span_63](start_span)[span_63](end_span)!");
         cancelEditProduct();
       } else {
         products.push({ id: "PRD_" + Date.now().toString(36), name, price, stock, barcode });
-        alert("✅ تم إضافة الصنف للمخزن!");
+        alert("✅ تم إضافة الصنف للمخزن[span_64](start_span)[span_64](end_span)!");
         e.target.reset();
       }
       saveData();
@@ -577,14 +585,14 @@
         <div class="item">
           <div>
             <div class="item-title">${escapeHtml(p.name)}</div>
-            <div class="muted">السعر: ${money(p.price)} | المخزن: <strong>${p.stock}</strong> ${p.barcode ? ' | باركود: ' + escapeHtml(p.barcode) : ''}</div>
+            <div class="muted">السعر: ${money(p.price)} | المخزن: <strong>${p.stock}</strong> ${p.barcode ? ' | باركود: ' + escapeHtml(p.barcode) : ''}[span_65](start_span)[span_65](end_span)</div>
           </div>
           <div style="display:flex; gap:4px;">
-            <button class="small-button" onclick="editProduct('${p.id}')">✏️ تعديل</button>
-            <button class="danger" onclick="deleteProduct('${p.id}')">حذف</button>
+            <button class="small-button" onclick="editProduct('${p.id}')">✏️ تعديل[span_66](start_span)[span_66](end_span)</button>
+            <button class="danger" onclick="deleteProduct('${p.id}')">حذف[span_67](start_span)[span_67](end_span)</button>
           </div>
         </div>
-      `).join("") : `<div class="empty">لا توجد أصناف بالمخزن.</div>`;
+      `).join("") : `<div class="empty">لا توجد أصناف بالمخزن.[span_68](start_span)[span_68](end_span)</div>`;
     }
 
     window.editProduct = function(id) {
@@ -596,7 +604,7 @@
       $("productStock").value = p.stock;
       $("productBarcode").value = p.barcode || "";
       $("productFormTitle").textContent = "تعديل صنف: " + p.name;
-      $("saveProductBtn").textContent = "💾 تحديث الصنف";
+      $("saveProductBtn").textContent = "💾 تحديث الصنف[span_69](start_span)[span_69](end_span)";
       $("cancelEditBtn").classList.remove("hidden");
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -604,13 +612,13 @@
     window.cancelEditProduct = function() {
       $("editingProductId").value = "";
       $("productForm").reset();
-      $("productFormTitle").textContent = "إضافة صنف جديد للمخزن";
-      $("saveProductBtn").textContent = "💾 حفظ الصنف";
+      $("productFormTitle").textContent = "إضافة صنف جديد للمخزن[span_70](start_span)[span_70](end_span)";
+      $("saveProductBtn").textContent = "💾 حفظ الصنف[span_71](start_span)[span_71](end_span)";
       $("cancelEditBtn").classList.add("hidden");
     };
 
     window.deleteProduct = function(id) {
-      if(!confirm("هل أنت متأكد من حذف الصنف؟")) return;
+      if(!confirm("هل أنت متأكد من حذف الصنف؟[span_72](start_span)[span_72](end_span)")) return;
       products = products.filter(p => p.id !== id);
       saveData();
     };
@@ -622,14 +630,14 @@
         <div class="item">
           <div>
             <div class="item-title">${escapeHtml(p.name)}</div>
-            <div class="muted">المتاح: ${p.stock}</div>
+            <div class="muted">المتاح: ${p.stock}[span_73](start_span)[span_73](end_span)</div>
           </div>
           <div class="row">
             <span class="price">${money(p.price)}</span>
-            <button class="small-button" onclick="addToCart('${p.id}')">إضافة</button>
+            <button class="small-button" onclick="addToCart('${p.id}')">إضافة[span_74](start_span)[span_74](end_span)</button>
           </div>
         </div>
-      `).join("") : `<div class="empty">لا توجد أصناف مطابقة.</div>`;
+      `).join("") : `<div class="empty">لا توجد أصناف مطابقة.[span_75](start_span)[span_75](end_span)</div>`;
     }
 
     function renderCart() {
@@ -637,16 +645,16 @@
         <div class="item">
           <div>
             <div class="item-title">${escapeHtml(i.name)}</div>
-            <div class="muted">${money(i.price)} للقطعة</div>
+            <div class="muted">${money(i.price)} للقطعة[span_76](start_span)[span_76](end_span)</div>
           </div>
           <div class="qty-controls">
             <button class="small-button" onclick="changeQty('${i.id}', -1)">−</button>
             <strong>${i.quantity}</strong>
             <button class="small-button" onclick="changeQty('${i.id}', 1)">+</button>
-            <button class="danger" onclick="removeFromCart('${i.id}')">حذف</button>
+            <button class="danger" onclick="removeFromCart('${i.id}')">حذف[span_77](start_span)[span_77](end_span)</button>
           </div>
         </div>
-      `).join("") : `<div class="empty">السلة فارغة.</div>`;
+      `).join("") : `<div class="empty">السلة فارغة.[span_78](start_span)[span_78](end_span)</div>`;
 
       const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
       const discount = Math.max(0, Number($("discount").value) || 0);
@@ -656,10 +664,10 @@
 
     window.addToCart = function(id) {
       const p = products.find(item => item.id === id);
-      if(!p || p.stock <= 0) return alert("الصنف غير متوفر!");
+      if(!p || p.stock <= 0) return alert("الصنف غير متوفر[span_79](start_span)[span_79](end_span)!");
       const item = cart.find(i => i.id === id);
       if(item) {
-        if(item.quantity >= p.stock) return alert("الكمية تتجاوز المخزون!");
+        if(item.quantity >= p.stock) return alert("الكمية تتجاوز المخزون[span_80](start_span)[span_80](end_span)!");
         item.quantity++;
       } else {
         cart.push({ id: p.id, name: p.name, price: p.price, quantity: 1 });
@@ -671,7 +679,7 @@
       const item = cart.find(i => i.id === id);
       const p = products.find(item => item.id === id);
       if(!item) return;
-      if(delta > 0 && item.quantity >= p.stock) return alert("المخزون لا يكفي!");
+      if(delta > 0 && item.quantity >= p.stock) return alert("المخزون لا يكفي[span_81](start_span)[span_81](end_span)!");
       item.quantity += delta;
       if(item.quantity <= 0) cart = cart.filter(i => i.id !== id);
       renderCart();
@@ -683,7 +691,7 @@
     };
 
     $("completeSale").addEventListener("click", () => {
-      if(!cart.length) return alert("السلة فارغة!");
+      if(!cart.length) return alert("السلة فارغة[span_82](start_span)[span_82](end_span)!");
       const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
       const discount = Number($("discount").value) || 0;
       const total = subtotal - discount;
@@ -714,7 +722,7 @@
       showReceipt(invoice);
     });
 
-    // --- نظام الفواتير والفلترة باليوم والبحث ---
+    // --- نظام الفواتير والفلترة باليوم مع زرار الحذف ---
     window.clearDateFilter = function() {
       $("filterDate").value = "";
       renderInvoices();
@@ -740,15 +748,16 @@
       $("invoicesList").innerHTML = filtered.length ? [...filtered].reverse().map(inv => `
         <div class="item">
           <div>
-            <div class="item-title">فاتورة ${escapeHtml(inv.id)}</div>
-            <div class="muted">${new Date(inv.date).toLocaleString("en-GB")} | ${escapeHtml(inv.customerName)} (${escapeHtml(inv.customerPhone)})</div>
+            <div class="item-title">فاتورة ${escapeHtml(inv.id)}[span_83](start_span)[span_83](end_span)</div>
+            <div class="muted">${new Date(inv.date).toLocaleString("en-GB")} | ${escapeHtml(inv.customerName)} (${escapeHtml(inv.customerPhone)})[span_84](start_span)[span_84](end_span)</div>
             <div class="price">${money(inv.total)}</div>
           </div>
           <div style="display:flex; gap:4px;">
-            <button class="secondary" onclick="viewInvoice('${inv.id}')">عرض</button>
+            <button class="secondary" onclick="viewInvoice('${inv.id}')">عرض[span_85](start_span)[span_85](end_span)</button>
+            <button class="danger" onclick="deleteInvoice('${inv.id}')">حذف[span_86](start_span)[span_86](end_span)</button>
           </div>
         </div>
-      `).join("") : `<div class="empty">لا توجد فواتير مطابقة لخيارات البحث أو التاريخ.</div>`;
+      `).join("") : `<div class="empty">لا توجد فواتير مطابقة لخيارات البحث أو التاريخ.[span_87](start_span)[span_87](end_span)</div>`;
     }
 
     window.viewInvoice = function(id) {
@@ -756,7 +765,21 @@
       if(inv) showReceipt(inv);
     };
 
-    // --- قسم المرتجعات الجديد بالكامل ---
+    window.deleteInvoice = function(id) {
+      if(!confirm("هل أنت متأكد من حذف الفاتورة وإرجاع الأصناف للمخزن؟[span_88](start_span)[span_88](end_span)")) return;
+      const inv = invoices.find(i => i.id === id);
+      if(inv) {
+        inv.items.forEach(item => {
+          const p = products.find(prod => prod.id === item.id);
+          if(p) p.stock += item.quantity;
+        });
+        invoices = invoices.filter(i => i.id !== id);
+        saveData();
+        renderInvoices();
+      }
+    };
+
+    // --- قسم المرتجعات (بالقطعة أو الفاتورة كاملة) ---
     function renderReturnSearch() {
       const q = $("returnSearchInput") ? $("returnSearchInput").value.trim().toLowerCase() : "";
       const found = invoices.filter(inv => {
@@ -764,47 +787,97 @@
         return inv.id.toLowerCase().includes(q) || inv.customerName.toLowerCase().includes(q) || inv.customerPhone.toLowerCase().includes(q);
       });
 
-      $("returnSearchResults").innerHTML = found.length ? found.map(inv => `
-        <div class="item" style="border-color:var(--green);">
-          <div>
-            <div class="item-title">فاتورة رقم: ${escapeHtml(inv.id)}</div>
-            <div class="muted">العميل: ${escapeHtml(inv.customerName)} | التاريخ: ${new Date(inv.date).toLocaleString("en-GB")}</div>
-            <div class="price">إجمالي الفاتورة: ${money(inv.total)}</div>
+      $("returnSearchResults").innerHTML = found.length ? found.map(inv => {
+        let itemsHtml = inv.items.map((item, idx) => `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin:4px 0; font-size:13px; background:#f9f9f9; padding:6px; border-radius:6px;">
+            <span>${idx+1}. ${escapeHtml(item.name)} (الكمية: ${item.quantity}) - ${money(item.price * item.quantity)}</span>
+            <button class="small-button danger" onclick="returnItem('${inv.id}', '${item.id}')">🔄 إرجاع هذه القطعة</button>
           </div>
-          <div>
-            <button class="primary" onclick="makeReturn('${inv.id}')">🔄 إرجاع هذه الفاتورة</button>
+        `).join("");
+
+        return `
+          <div class="item" style="border-color:var(--green); display:block; margin-bottom:10px;">
+            <div style="display:flex; justify-content:between; align-items:center; margin-bottom:8px;">
+              <div>
+                <div class="item-title">فاتورة رقم: ${escapeHtml(inv.id)}</div>
+                <div class="muted">العميل: ${escapeHtml(inv.customerName)} | التاريخ: ${new Date(inv.date).toLocaleString("en-GB")}</div>
+              </div>
+              <button class="danger" onclick="makeFullReturn('${inv.id}')">🔄 إرجاع الفاتورة بالكامل</button>
+            </div>
+            <div style="margin-top:8px; border-top:1px dashed #ddd; padding-top:6px;">
+              <div class="muted" style="margin-bottom:4px;">اختر الصنف المراد إرجاعه:</div>
+              ${itemsHtml}
+            </div>
           </div>
-        </div>
-      `).join("") : `<div class="empty">اكتب رقم الفاتورة أو اسم العميل للبحث عنها وإرجاعها.</div>`;
+        `;
+      }).join("") : `<div class="empty">اكتب رقم الفاتورة أو اسم العميل للبحث عنها وإرجاع أصنافها.[span_89](start_span)[span_89](end_span)</div>`;
     }
 
-    window.makeReturn = function(invoiceId) {
+    window.returnItem = function(invoiceId, itemId) {
       const inv = invoices.find(i => i.id === invoiceId);
-      if(!inv) return alert("الفاتورة غير موجودة!");
-      if(confirm(`هل أنت متأكد من عمل مرتجع للفاتورة [${inv.id}] بمبلغ ${money(inv.total)} وإرجاع أصنافها للمخزن؟`)) {
-        // إرجاع الأصناف للمخزن
+      if(!inv) return;
+      const itemIdx = inv.items.findIndex(i => i.id === itemId);
+      if(itemIdx === -1) return;
+
+      const item = inv.items[itemIdx];
+      let qtyToReturn = prompt(`أدخل الكمية المراد إرجاعها للصنف (${item.name}), المتاح في الفاتورة: ${item.quantity}`, "1");
+      if(!qtyToReturn) return;
+      qtyToReturn = Number(qtyToReturn);
+      if(isNaN(qtyToReturn) || qtyToReturn <= 0 || qtyToReturn > item.quantity) {
+        return alert("❌ كمية غير صحيحة[span_90](start_span)[span_90](end_span)!");
+      }
+
+      const returnAmount = item.price * qtyToReturn;
+
+      const p = products.find(prod => prod.id === item.id);
+      if(p) p.stock += qtyToReturn;
+
+      returns.push({
+        id: "RET_" + Math.random().toString(36).substr(2, 6).toUpperCase(),
+        invoiceId: inv.id,
+        date: new Date().toISOString(),
+        customerName: inv.customerName,
+        items: [{ name: item.name, quantity: qtyToReturn, price: item.price }],
+        total: returnAmount
+      });
+
+      item.quantity -= qtyToReturn;
+      inv.subtotal -= returnAmount;
+      inv.total = Math.max(0, inv.subtotal - inv.discount);
+      if(item.quantity <= 0) {
+        inv.items.splice(itemIdx, 1);
+      }
+      if(inv.items.length === 0) {
+        invoices = invoices.filter(i => i.id !== invoiceId);
+      }
+
+      saveData();
+      alert(`✅ تم إرجاع (${qtyToReturn}) من الصنف (${item.name}) بنجاح بقيمة ${money(returnAmount)}[span_91](start_span)[span_91](end_span)!`);
+      renderReturnSearch();
+      renderReturnsList();
+    };
+
+    window.makeFullReturn = function(invoiceId) {
+      const inv = invoices.find(i => i.id === invoiceId);
+      if(!inv) return alert("الفاتورة غير موجودة[span_92](start_span)[span_92](end_span)!");
+      if(confirm(`هل أنت متأكد من عمل مرتجع كامل للفاتورة [${inv.id}] بمبلغ ${money(inv.total)} وإرجاع كافة أصنافها للمخزن؟[span_93](start_span)[span_93](end_span)`)) {
         inv.items.forEach(item => {
           const p = products.find(prod => prod.id === item.id);
           if(p) p.stock += item.quantity;
         });
 
-        // تسجيل حركة المرتجع
-        const returnObj = {
+        returns.push({
           id: "RET_" + Math.random().toString(36).substr(2, 6).toUpperCase(),
           invoiceId: inv.id,
           date: new Date().toISOString(),
           customerName: inv.customerName,
           items: inv.items,
           total: inv.total
-        };
+        });
 
-        returns.push(returnObj);
-        
-        // حذف الفاتورة الأصلية أو الاحتفاظ بها مع علم المرتجع (هنا سنحذفها من السجل وننقلها للمرتجعات لتصفية الحسابات بدقة)
         invoices = invoices.filter(i => i.id !== invoiceId);
-
         saveData();
-        alert("✅ تم تنفيذ المرتجع بنجاح وإرجاع الأصناف للمخزن وتحديث الحسابات!");
+        alert("✅ تم تنفيذ المرتجع الكامل بنجاح[span_94](start_span)[span_94](end_span)!");
         renderReturnSearch();
         renderReturnsList();
       }
@@ -815,11 +888,11 @@
         <div class="item" style="border-color:#f8d7da;">
           <div>
             <div class="item-title">مرتجع للفاتورة: ${escapeHtml(ret.invoiceId)} (مرتجع #${ret.id})</div>
-            <div class="muted">${new Date(ret.date).toLocaleString("en-GB")} | العميل: ${escapeHtml(ret.customerName)}</div>
+            <div class="muted">${new Date(ret.date).toLocaleString("en-GB")} | العميل: ${escapeHtml(ret.customerName)}[span_95](start_span)[span_95](end_span)</div>
             <div class="price" style="color:var(--red);">قيمة المرتجع: -${money(ret.total)}</div>
           </div>
         </div>
-      `).join("") : `<div class="empty">لا توجد مرتجعات مسجلة.</div>`;
+      `).join("") : `<div class="empty">لا توجد مرتجعات مسجلة.[span_96](start_span)[span_96](end_span)</div>`;
     }
 
     function showReceipt(inv) {
@@ -840,25 +913,25 @@
       $("receipt").innerHTML = `
         <div id="receiptContent" style="background:#fff; padding:20px; border-radius:10px; max-width:420px; margin:0 auto; font-family:monospace; line-height:1.5;">
           <div style="text-align:center;">
-            <h2 style="margin:0; font-size:20px; font-weight:bold;">مول الصعيدي</h2>
-            <div style="font-size:13px; color:#555;">ملابس أطفال وكماليات</div>
+            <h2 style="margin:0; font-size:20px; font-weight:bold;">مول الصعيدي[span_97](start_span)[span_97](end_span)</h2>
+            <div style="font-size:13px; color:#555;">ملابس أطفال وكماليات[span_98](start_span)[span_98](end_span)</div>
           </div>
           <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
           <div style="font-size:13px;">
             <div><strong>رقم الفاتورة:</strong> ${escapeHtml(inv.id)}</div>
             <div><strong>التاريخ:</strong> ${dateStr} &nbsp;&nbsp; <strong>الساعة:</strong> ${timeStr}</div>
-            <div><strong>اسم العميل:</strong> ${escapeHtml(inv.customerName)}</div>
-            <div><strong>رقم الهاتف:</strong> ${escapeHtml(inv.customerPhone)}</div>
+            <div><strong>اسم العميل:</strong> ${escapeHtml(inv.customerName)}[span_99](start_span)[span_99](end_span)</div>
+            <div><strong>رقم الهاتف:</strong> ${escapeHtml(inv.customerPhone)}[span_100](start_span)[span_100](end_span)</div>
           </div>
           <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
           
           <table style="width:100%; font-size:12px; border-collapse:collapse;">
             <thead>
               <tr style="border-bottom:1px solid #333;">
-                <th style="text-align:right; padding-bottom:4px;">الصنف</th>
-                <th style="text-align:center; padding-bottom:4px;">الكمية</th>
-                <th style="text-align:center; padding-bottom:4px;">السعر</th>
-                <th style="text-align:left; padding-bottom:4px;">الإجمالي</th>
+                <th style="text-align:right; padding-bottom:4px;">الصنف[span_101](start_span)[span_101](end_span)</th>
+                <th style="text-align:center; padding-bottom:4px;">الكمية[span_102](start_span)[span_102](end_span)</th>
+                <th style="text-align:center; padding-bottom:4px;">السعر[span_103](start_span)[span_103](end_span)</th>
+                <th style="text-align:left; padding-bottom:4px;">الإجمالي[span_104](start_span)[span_104](end_span)</th>
               </tr>
             </thead>
             <tbody>
@@ -868,24 +941,24 @@
           
           <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
           <div style="font-size:13px;">
-            <div style="display:flex; justify-content:space-between;"><span>عدد القطع:</span> <strong>${totalPieces}</strong></div>
-            <div style="display:flex; justify-content:space-between;"><span>الإجمالي:</span> <strong>${money(inv.subtotal)}</strong></div>
-            ${inv.discount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>الخصم:</span> <strong>${money(inv.discount)}</strong></div>` : ''}
-            <div style="display:flex; justify-content:space-between; font-size:15px; margin-top:4px;"><span>المطلوب:</span> <strong>${money(inv.total)}</strong></div>
-            <div style="display:flex; justify-content:space-between;"><span>المدفوع:</span> <strong>${money(inv.paid)}</strong></div>
-            <div style="display:flex; justify-content:space-between;"><span>المتبقي:</span> <strong>${money(inv.remaining)}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>عدد القطع:[span_105](start_span)[span_105](end_span)</span> <strong>${totalPieces}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>الإجمالي:[span_106](start_span)[span_106](end_span)</span> <strong>${money(inv.subtotal)}</strong></div>
+            ${inv.discount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>الخصم:[span_107](start_span)[span_107](end_span)</span> <strong>${money(inv.discount)}</strong></div>` : ''}
+            <div style="display:flex; justify-content:space-between; font-size:15px; margin-top:4px;"><span>المطلوب:[span_108](start_span)[span_108](end_span)</span> <strong>${money(inv.total)}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>المدفوع:[span_109](start_span)[span_109](end_span)</span> <strong>${money(inv.paid)}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>المتبقي:[span_110](start_span)[span_110](end_span)</span> <strong>${money(inv.remaining)}</strong></div>
           </div>
           <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
           <div style="font-size:11px; text-align:center; color:#444; line-height:1.4;">
-            <strong>سياسة الاستبدال والاسترجاع:</strong><br>
-            الاستبدال خلال 7 أيام، والاسترجاع خلال 3 أيام<br>
-            بشرط وجود الفاتورة وبقاء المنتج بحالته الأصلية.<br><br>
-            <strong>شكرًا لتسوقكم من مول الصعيدي 🙏</strong>
+            <strong>سياسة الاستبدال والاسترجاع:[span_111](start_span)[span_111](end_span)</strong><br>
+            الاستبدال خلال 7 أيام، والاسترجاع خلال 3 أيام[span_112](start_span)[span_112](end_span)<br>
+            بشرط وجود الفاتورة وبقاء المنتج بحالته الأصلية.[span_113](start_span)[span_113](end_span)<br><br>
+            <strong>شكرًا لتسوقكم من مول الصعيدي 🙏[span_114](start_span)[span_114](end_span)</strong>
           </div>
         </div>
         <div class="actions no-print" style="margin-top:12px; display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-          <button class="primary" onclick="shareReceiptImage()">📸 حفظ ومشاركة كصورة (واتساب)</button>
-          <button class="secondary" onclick="window.print()">🖨️ طباعة الإيصال</button>
+          <button class="primary" onclick="shareReceiptImage()">📸 حفظ ومشاركة كصورة (واتساب)[span_115](start_span)[span_115](end_span)</button>
+          <button class="secondary" onclick="window.print()">🖨️ طباعة الإيصال[span_116](start_span)[span_116](end_span)</button>
         </div>
       `;
       $("receipt").classList.remove("hidden");
@@ -900,7 +973,7 @@
             navigator.share({ files: [file], title: 'فاتورة مول الصعيدي' });
           } else {
             let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Invoice_Saidi_Mall.png'; a.click();
-            alert("تم حفظ صورة الفاتورة على جهازك.");
+            alert("تم حفظ صورة الفاتورة على جهازك.[span_117](start_span)[span_117](end_span)");
           }
         });
       });
@@ -908,10 +981,10 @@
 
     window.shareDayInvoicesImage = function() {
       const dateVal = $("filterDate").value;
-      if(!dateVal) return alert("برجاء تحديد يوم معين أولاً لعرض ومشاركة فواتيره!");
+      if(!dateVal) return alert("برجاء تحديد يوم معين أولاً لعرض ومشاركة فواتيره[span_118](start_span)[span_118](end_span)!");
 
       const dayInvoices = invoices.filter(inv => inv.date.slice(0, 10) === dateVal);
-      if(!dayInvoices.length) return alert("لا توجد فواتير مسجلة في هذا اليوم.");
+      if(!dayInvoices.length) return alert("لا توجد فواتير مسجلة في هذا اليوم.[span_119](start_span)[span_119](end_span)");
 
       $("imgDayTitle").textContent = `تاريخ اليوم: ${dateVal}`;
       let contentHtml = `<b>إجمالي الفواتير: ${dayInvoices.length}</b><br><br>`;
@@ -939,7 +1012,7 @@
             navigator.share({ files: [file], title: 'فواتير يوم مول الصعيدي' });
           } else {
             let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Invoices_${dateVal}.png`; a.click();
-            alert("تم حفظ صورة فواتير اليوم على جهازك.");
+            alert("تم حفظ صورة فواتير اليوم على جهازك.[span_120](start_span)[span_120](end_span)");
           }
         });
       });
@@ -950,7 +1023,7 @@
       e.preventDefault();
       const title = $("expenseTitle").value.trim();
       const amount = Number($("expenseAmount").value);
-      if(!title || amount <= 0) return alert("أدخل بيانات صحيحة للمصروف.");
+      if(!title || amount <= 0) return alert("أدخل بيانات صحيحة للمصروف.[span_121](start_span)[span_121](end_span)");
 
       expenses.push({ id: "EXP_" + Date.now().toString(36), title, amount, date: new Date().toISOString() });
       saveData();
@@ -963,14 +1036,14 @@
         <div class="item">
           <div>
             <div class="item-title">${escapeHtml(e.title)}</div>
-            <div class="muted">${new Date(e.date).toLocaleString("en-GB")}</div>
+            <div class="muted">${new Date(e.date).toLocaleString("en-GB")}[span_122](start_span)[span_122](end_span)</div>
           </div>
           <div class="row">
             <span class="price" style="color:var(--red);">${money(e.amount)}</span>
-            <button class="danger" onclick="deleteExpense('${e.id}')">حذف</button>
+            <button class="danger" onclick="deleteExpense('${e.id}')">حذف[span_123](start_span)[span_123](end_span)</button>
           </div>
         </div>
-      `).join("") : `<div class="empty">لا توجد مصاريف مسجلة.</div>`;
+      `).join("") : `<div class="empty">لا توجد مصاريف مسجلة.[span_124](start_span)[span_124](end_span)</div>`;
     }
 
     window.deleteExpense = function(id) {
@@ -979,7 +1052,7 @@
       renderExpenses();
     };
 
-    // --- إدارة الفترات والتقارير مع خصم المرتجعات تلقائياً ---
+    // --- إدارة الفترات والتقارير مع الأصناف الأكثر مبيعاً ---
     window.setReportPeriod = function(type) {
       const now = new Date();
       let start = "", end = "";
@@ -1031,13 +1104,46 @@
       $("repTotalExpenses").textContent = money(totalExpenses);
       $("repNetProfit").textContent = money(netProfit);
 
+      // حساب الأصناف الأكثر مبيعاً خلال الفتره
+      let itemSalesMap = {};
+      filteredInvoices.forEach(inv => {
+        inv.items.forEach(item => {
+          if(!itemSalesMap[item.name]) {
+            itemSalesMap[item.name] = { qty: 0, total: 0 };
+          }
+          itemSalesMap[item.name].qty += item.quantity;
+          itemSalesMap[item.name].total += item.price * item.quantity;
+        });
+      });
+
+      let sortedTopItems = Object.keys(itemSalesMap).map(name => ({
+        name,
+        qty: itemSalesMap[name].qty,
+        total: itemSalesMap[name].total
+      })).sort((a, b) => b.qty - a.qty);
+
+      let topListHtml = "";
+      let topPrintHtml = "<b>🔥 الأصناف الأكثر مبيعاً:</b><br>";
+      if(sortedTopItems.length > 0) {
+        sortedTopItems.slice(0, 5).forEach((item, idx) => {
+          topListHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${idx+1}. ${escapeHtml(item.name)}</span> <strong>الكمية: ${item.qty} (${money(item.total)})</strong></div>`;
+          topPrintHtml += `${idx+1}. ${escapeHtml(item.name)} (الكمية: ${item.qty})<br>`;
+        });
+      } else {
+        topListHtml = `<div class="muted">لا توجد مبيعات أصناف في هذه الفترة.[span_125](start_span)[span_125](end_span)</div>`;
+        topPrintHtml += `لا توجد مبيعات أصناف.<br>`;
+      }
+      $("topSellingList").innerHTML = topListHtml;
+      $("imgTopSellingPrint").innerHTML = topPrintHtml;
+
+      // تفاصيل الحركات
       let detailsHtml = "";
       filteredInvoices.forEach((inv, idx) => {
         detailsHtml += `
           <div class="item">
             <div>
-              <div class="item-title">${idx + 1}. [فاتورة: ${inv.id}] - ${escapeHtml(inv.customerName)}</div>
-              <div class="muted">${new Date(inv.date).toLocaleString("en-GB")} | القطع: ${inv.items.reduce((s,i)=>s+i.quantity,0)}</div>
+              <div class="item-title">${idx + 1}. [فاتورة: ${inv.id}] - ${escapeHtml(inv.customerName)}[span_126](start_span)[span_126](end_span)</div>
+              <div class="muted">${new Date(inv.date).toLocaleString("en-GB")} | القطع: ${inv.items.reduce((s,i)=>s+i.quantity,0)}[span_127](start_span)[span_127](end_span)</div>
             </div>
             <div class="price">${money(inv.total)}</div>
           </div>
@@ -1047,8 +1153,8 @@
         detailsHtml += `
           <div class="item" style="border-color:#f8d7da;">
             <div>
-              <div class="item-title">🔄 [مرتجع]: ${escapeHtml(ret.invoiceId)} - ${escapeHtml(ret.customerName)}</div>
-              <div class="muted">${new Date(ret.date).toLocaleString("en-GB")}</div>
+              <div class="item-title">🔄 [مرتجع]: فاتورة ${escapeHtml(ret.invoiceId)} - ${escapeHtml(ret.customerName)}[span_128](start_span)[span_128](end_span)</div>
+              <div class="muted">${new Date(ret.date).toLocaleString("en-GB")}[span_129](start_span)[span_129](end_span)</div>
             </div>
             <div class="price" style="color:var(--red);">-${money(ret.total)}</div>
           </div>
@@ -1058,17 +1164,17 @@
         detailsHtml += `
           <div class="item" style="border-color:#f8d7da;">
             <div>
-              <div class="item-title">💸 [مصروف]: ${escapeHtml(exp.title)}</div>
-              <div class="muted">${new Date(exp.date).toLocaleString("en-GB")}</div>
+              <div class="item-title">💸 [مصروف]: ${escapeHtml(exp.title)}[span_130](start_span)[span_130](end_span)</div>
+              <div class="muted">${new Date(exp.date).toLocaleString("en-GB")}[span_131](start_span)[span_131](end_span)</div>
             </div>
             <div class="price" style="color:var(--red);">${money(exp.amount)}</div>
           </div>
         `;
       });
 
-      $("reportDetailsList").innerHTML = detailsHtml || `<div class="empty">لا توجد حركات في هذه الفترة.</div>`;
+      $("reportDetailsList").innerHTML = detailsHtml || `<div class="empty">لا توجد حركات في هذه الفترة.[span_132](start_span)[span_132](end_span)</div>`;
 
-      $("repRangeText").textContent = `الفترة: ${startStr || 'البداية'} إلى ${endStr || 'الآن'}`;
+      $("repRangeText").textContent = `الفترة: ${startStr || 'البداية'} إلى ${endStr || 'الآن'}[span_133](start_span)[span_133](end_span)`;
       $("imgRepSales").textContent = money(totalSales);
       $("imgRepReturns").textContent = "-" + money(totalReturns);
       $("imgRepExp").textContent = money(totalExpenses);
@@ -1076,24 +1182,24 @@
 
       let itemsHtml = "";
       if(filteredInvoices.length > 0) {
-        itemsHtml += `<b>الفواتير:</b><br>`;
+        itemsHtml += `<b>الفواتير:[span_134](start_span)[span_134](end_span)</b><br>`;
         filteredInvoices.forEach((inv, i) => {
           itemsHtml += `${i+1}. ${inv.id} (${inv.customerName}) — ${money(inv.total)}<br>`;
         });
       }
       if(filteredReturns.length > 0) {
-        itemsHtml += `<br><b>المرتجعات:</b><br>`;
+        itemsHtml += `<br><b>المرتجعات:[span_135](start_span)[span_135](end_span)</b><br>`;
         filteredReturns.forEach((r, i) => {
           itemsHtml += `${i+1}. مرتجع ${r.invoiceId} — -${money(r.total)}<br>`;
         });
       }
       if(filteredExpenses.length > 0) {
-        itemsHtml += `<br><b>المصاريف:</b><br>`;
+        itemsHtml += `<br><b>المصاريف:[span_136](start_span)[span_136](end_span)</b><br>`;
         filteredExpenses.forEach((e, i) => {
           itemsHtml += `${i+1}. ${e.title} — ${money(e.amount)}<br>`;
         });
       }
-      $("imgRepItemsList").innerHTML = itemsHtml || `لا توجد حركات.`;
+      $("imgRepItemsList").innerHTML = itemsHtml || `لا توجد حركات.[span_137](start_span)[span_137](end_span)`;
     }
 
     window.shareReportImage = function() {
@@ -1107,7 +1213,7 @@
             navigator.share({ files: [file], title: 'تقرير مبيعات مول الصعيدي' });
           } else {
             let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'SaidiMall_Report.png'; a.click();
-            alert("تم حفظ صورة التقرير على جهازك.");
+            alert("تم حفظ صورة التقرير على جهازك.[span_138](start_span)[span_138](end_span)");
           }
         });
       });
