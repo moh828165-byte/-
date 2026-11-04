@@ -699,12 +699,10 @@
       const dateVal = $("filterDate") ? $("filterDate").value : "";
 
       const filtered = invoices.filter(inv => {
-        // فلترة التاريخ
         if(dateVal) {
           const invDateStr = inv.date.slice(0, 10);
           if(invDateStr !== dateVal) return false;
         }
-        // فلترة البحث
         if(!q) return true;
         const matchId = inv.id.toLowerCase().includes(q);
         const matchName = inv.customerName.toLowerCase().includes(q);
@@ -831,7 +829,6 @@
       });
     };
 
-    // مشاركة فواتير اليوم المحدد كصورة واتساب
     window.shareDayInvoicesImage = function() {
       const dateVal = $("filterDate").value;
       if(!dateVal) return alert("برجاء تحديد يوم معين أولاً لعرض ومشاركة فواتيره!");
@@ -904,7 +901,6 @@
       renderExpenses();
     };
 
-    // --- إدارة الفترات والتقارير وكشف الحساب ---
     window.setReportPeriod = function(type) {
       const now = new Date();
       let start = "", end = "";
@@ -996,13 +992,6 @@
       });
     };
 
-    $("exportProducts").addEventListener("click", () => {
-      let csv = "\uFEFFاسم الصنف,السعر,المخزن,الباركود\n";
-      products.forEach(p => { csv += `"${p.name}",${p.price},${p.stock},"${p.barcode || ''}"\n`; });
-      let blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Inventory_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-    });
-
     function renderAll() {
       renderSearch();
       renderCart();
@@ -1012,8 +1001,8 @@
     }
 
     document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
-    $("productSearch").addEventListener("input", renderSearch);
-    $("discount").addEventListener("input", renderCart);
+    if($("productSearch")) $("productSearch").addEventListener("input", renderSearch);
+    if($("discount")) $("discount").addEventListener("input", renderCart);
 
     renderAll();
   </script>
