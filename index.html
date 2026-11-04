@@ -161,7 +161,7 @@
 <body>
   <header>
     <h1>مول الصعيدي</h1>
-    <p>ملابس أطفال وكماليات — نظام الكاشير والمخزن والمصاريف</p>
+    <p>ملابس أطفال وكماليات — نظام الكاشير والمخزن والمصاريف والمرتجعات</p>
   </header>
 
   <main>
@@ -178,8 +178,9 @@
       <button class="tab active" data-view="saleView">🛒 الكاشير</button>
       <button class="tab" data-view="productsView">📦 المخزن</button>
       <button class="tab" data-view="invoicesView">📄 الفواتير</button>
+      <button class="tab" data-view="returnsView">🔄 المرتجعات</button>
       <button class="tab" data-view="expensesView">💸 المصاريف</button>
-      <button class="tab" data-view="reportsView">📊 التقارير وكشف الحساب</button>
+      <button class="tab" data-view="reportsView">📊 التقارير</button>
     </nav>
 
     <!-- شاشة الكاشير -->
@@ -300,6 +301,23 @@
       </div>
     </section>
 
+    <!-- شاشة المرتجعات الجديدة -->
+    <section id="returnsView" class="view hidden">
+      <div class="panel">
+        <h2>🔄 قسم إدارة المرتجعات</h2>
+        <div class="field full" style="margin-bottom:10px;">
+          <label for="returnSearchInput">ابحث برقم الفاتورة أو اسم العميل لعمل مرتجع:</label>
+          <input id="returnSearchInput" autocomplete="off" placeholder="ادخل رقم الفاتورة (مثال: INV_...) أو اسم العميل..." oninput="renderReturnSearch()">
+        </div>
+        <div id="returnSearchResults" class="invoice-list"></div>
+      </div>
+
+      <div class="panel">
+        <h2>سجل المرتجعات المسجلة</h2>
+        <div id="returnsList" class="invoice-list"></div>
+      </div>
+    </section>
+
     <!-- شاشة المصاريف اليومية -->
     <section id="expensesView" class="view hidden">
       <div class="panel">
@@ -325,7 +343,7 @@
       </div>
     </section>
 
-    <!-- شاشة التقارير -->
+    <!-- شاشة التقارير (مع خصم المرتجعات أوتوماتيك) -->
     <section id="reportsView" class="view hidden">
       <div class="panel">
         <h2>📊 تقارير المبيعات وكشف الحساب بالفترة</h2>
@@ -353,6 +371,10 @@
             <h3 id="repTotalSales">0.00 EGP</h3>
           </div>
           <div class="card">
+            <div class="muted">إجمالي المرتجعات</div>
+            <h3 id="repTotalReturns" style="color:var(--red);">0.00 EGP</h3>
+          </div>
+          <div class="card">
             <div class="muted">إجمالي المصاريف</div>
             <h3 id="repTotalExpenses" style="color:var(--red);">0.00 EGP</h3>
           </div>
@@ -360,14 +382,10 @@
             <div class="muted">صافي الدرج (الربح)</div>
             <h3 id="repNetProfit">0.00 EGP</h3>
           </div>
-          <div class="card">
-            <div class="muted">عدد الفواتير</div>
-            <h3 id="repInvoicesCount">0</h3>
-          </div>
         </div>
 
         <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
-          <h3>تفاصيل حركات الفترة (المبيعات والمصاريف)</h3>
+          <h3>تفاصيل حركات الفترة (مبيعات، مرتجعات، مصاريف)</h3>
           <button class="primary" onclick="shareReportImage()">📱 مشاركة التقرير كصورة واتساب</button>
         </div>
         <div id="reportDetailsList" class="invoice-list" style="margin-top:10px;"></div>
@@ -382,9 +400,9 @@
         <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
         <div style="font-size:13px; line-height:1.6;">
           <div>💰 إجمالي المبيعات: <strong id="imgRepSales"></strong></div>
+          <div>🔄 إجمالي المرتجعات: <strong id="imgRepReturns" style="color:red;"></strong></div>
           <div>💸 إجمالي المصاريف: <strong id="imgRepExp"></strong></div>
           <div>📉 صافي الدرج (الربح): <strong id="imgRepNet"></strong></div>
-          <div>📄 عدد الفواتير: <strong id="imgRepCount"></strong></div>
         </div>
         <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
         <div style="font-size:12px;" id="imgRepItemsList"></div>
@@ -406,7 +424,7 @@
       <div style="text-align:center; font-size:11px; color:#555;">مول الصعيدي للإدارة والتحكم 🙏</div>
     </div>
 
-    <!-- الفاتورة الرسمية -->
+    <!-- الفاتورة الرسمية أو إيصال المرتجع -->
     <section id="receipt" class="panel hidden"></section>
   </main>
 
@@ -416,6 +434,7 @@
     let products = JSON.parse(localStorage.getItem("sm_products") || "[]");
     let invoices = JSON.parse(localStorage.getItem("sm_invoices") || "[]");
     let expenses = JSON.parse(localStorage.getItem("sm_expenses") || "[]");
+    let returns = JSON.parse(localStorage.getItem("sm_returns") || "[]");
     let cart = [];
 
     const $ = id => document.getElementById(id);
@@ -426,6 +445,7 @@
       localStorage.setItem("sm_products", JSON.stringify(products));
       localStorage.setItem("sm_invoices", JSON.stringify(invoices));
       localStorage.setItem("sm_expenses", JSON.stringify(expenses));
+      localStorage.setItem("sm_returns", JSON.stringify(returns));
       renderAll();
     }
 
@@ -438,6 +458,10 @@
         else renderReports();
       }
       if(viewId === "expensesView") renderExpenses();
+      if(viewId === "returnsView") {
+        renderReturnSearch();
+        renderReturnsList();
+      }
       if(viewId === "invoicesView") {
         if(!$("filterDate").value) $("filterDate").value = new Date().toISOString().slice(0, 10);
         renderInvoices();
@@ -445,7 +469,7 @@
     }
 
     function exportBackup() {
-      const backup = { products, invoices, expenses, date: new Date().toISOString() };
+      const backup = { products, invoices, expenses, returns, date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -464,6 +488,7 @@
             products = data.products;
             invoices = data.invoices;
             expenses = data.expenses || [];
+            returns = data.returns || [];
             saveData();
             alert("✅ تمت استعادة النسخة الاحتياطية بنجاح!");
           } else {
@@ -721,7 +746,6 @@
           </div>
           <div style="display:flex; gap:4px;">
             <button class="secondary" onclick="viewInvoice('${inv.id}')">عرض</button>
-            <button class="danger" onclick="deleteInvoice('${inv.id}')">حذف</button>
           </div>
         </div>
       `).join("") : `<div class="empty">لا توجد فواتير مطابقة لخيارات البحث أو التاريخ.</div>`;
@@ -732,19 +756,71 @@
       if(inv) showReceipt(inv);
     };
 
-    window.deleteInvoice = function(id) {
-      if(!confirm("إلغاء وحذف الفاتورة وإرجاع الأصناف للمخزن؟")) return;
-      const inv = invoices.find(i => i.id === id);
-      if(inv) {
+    // --- قسم المرتجعات الجديد بالكامل ---
+    function renderReturnSearch() {
+      const q = $("returnSearchInput") ? $("returnSearchInput").value.trim().toLowerCase() : "";
+      const found = invoices.filter(inv => {
+        if(!q) return false;
+        return inv.id.toLowerCase().includes(q) || inv.customerName.toLowerCase().includes(q) || inv.customerPhone.toLowerCase().includes(q);
+      });
+
+      $("returnSearchResults").innerHTML = found.length ? found.map(inv => `
+        <div class="item" style="border-color:var(--green);">
+          <div>
+            <div class="item-title">فاتورة رقم: ${escapeHtml(inv.id)}</div>
+            <div class="muted">العميل: ${escapeHtml(inv.customerName)} | التاريخ: ${new Date(inv.date).toLocaleString("en-GB")}</div>
+            <div class="price">إجمالي الفاتورة: ${money(inv.total)}</div>
+          </div>
+          <div>
+            <button class="primary" onclick="makeReturn('${inv.id}')">🔄 إرجاع هذه الفاتورة</button>
+          </div>
+        </div>
+      `).join("") : `<div class="empty">اكتب رقم الفاتورة أو اسم العميل للبحث عنها وإرجاعها.</div>`;
+    }
+
+    window.makeReturn = function(invoiceId) {
+      const inv = invoices.find(i => i.id === invoiceId);
+      if(!inv) return alert("الفاتورة غير موجودة!");
+      if(confirm(`هل أنت متأكد من عمل مرتجع للفاتورة [${inv.id}] بمبلغ ${money(inv.total)} وإرجاع أصنافها للمخزن؟`)) {
+        // إرجاع الأصناف للمخزن
         inv.items.forEach(item => {
           const p = products.find(prod => prod.id === item.id);
           if(p) p.stock += item.quantity;
         });
-        invoices = invoices.filter(i => i.id !== id);
+
+        // تسجيل حركة المرتجع
+        const returnObj = {
+          id: "RET_" + Math.random().toString(36).substr(2, 6).toUpperCase(),
+          invoiceId: inv.id,
+          date: new Date().toISOString(),
+          customerName: inv.customerName,
+          items: inv.items,
+          total: inv.total
+        };
+
+        returns.push(returnObj);
+        
+        // حذف الفاتورة الأصلية أو الاحتفاظ بها مع علم المرتجع (هنا سنحذفها من السجل وننقلها للمرتجعات لتصفية الحسابات بدقة)
+        invoices = invoices.filter(i => i.id !== invoiceId);
+
         saveData();
-        renderInvoices();
+        alert("✅ تم تنفيذ المرتجع بنجاح وإرجاع الأصناف للمخزن وتحديث الحسابات!");
+        renderReturnSearch();
+        renderReturnsList();
       }
     };
+
+    function renderReturnsList() {
+      $("returnsList").innerHTML = returns.length ? [...returns].reverse().map(ret => `
+        <div class="item" style="border-color:#f8d7da;">
+          <div>
+            <div class="item-title">مرتجع للفاتورة: ${escapeHtml(ret.invoiceId)} (مرتجع #${ret.id})</div>
+            <div class="muted">${new Date(ret.date).toLocaleString("en-GB")} | العميل: ${escapeHtml(ret.customerName)}</div>
+            <div class="price" style="color:var(--red);">قيمة المرتجع: -${money(ret.total)}</div>
+          </div>
+        </div>
+      `).join("") : `<div class="empty">لا توجد مرتجعات مسجلة.</div>`;
+    }
 
     function showReceipt(inv) {
       const totalPieces = inv.items.reduce((s, i) => s + i.quantity, 0);
@@ -808,8 +884,8 @@
           </div>
         </div>
         <div class="actions no-print" style="margin-top:12px; display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-          <button class="primary" onclick="shareReceiptImage()">📸 حفظ ومشاركة كصورة (بديل الطباعة)</button>
-          <button class="secondary" onclick="window.print()">🖨️ طباعة الإيصال (عادي)</button>
+          <button class="primary" onclick="shareReceiptImage()">📸 حفظ ومشاركة كصورة (واتساب)</button>
+          <button class="secondary" onclick="window.print()">🖨️ طباعة الإيصال</button>
         </div>
       `;
       $("receipt").classList.remove("hidden");
@@ -824,7 +900,7 @@
             navigator.share({ files: [file], title: 'فاتورة مول الصعيدي' });
           } else {
             let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Invoice_Saidi_Mall.png'; a.click();
-            alert("تم حفظ صورة الفاتورة على جهازك بنجاح.");
+            alert("تم حفظ صورة الفاتورة على جهازك.");
           }
         });
       });
@@ -903,7 +979,7 @@
       renderExpenses();
     };
 
-    // --- إدارة الفترات والتقارير وكشف الحساب الشامل ---
+    // --- إدارة الفترات والتقارير مع خصم المرتجعات تلقائياً ---
     window.setReportPeriod = function(type) {
       const now = new Date();
       let start = "", end = "";
@@ -935,19 +1011,25 @@
         return t >= startTime && t <= endTime;
       });
 
+      const filteredReturns = returns.filter(ret => {
+        const t = new Date(ret.date).getTime();
+        return t >= startTime && t <= endTime;
+      });
+
       const filteredExpenses = expenses.filter(exp => {
         const t = new Date(exp.date).getTime();
         return t >= startTime && t <= endTime;
       });
 
       const totalSales = filteredInvoices.reduce((s, i) => s + i.total, 0);
+      const totalReturns = filteredReturns.reduce((s, r) => s + r.total, 0);
       const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
-      const netProfit = totalSales - totalExpenses;
+      const netProfit = totalSales - totalReturns - totalExpenses;
 
       $("repTotalSales").textContent = money(totalSales);
+      $("repTotalReturns").textContent = money(totalReturns);
       $("repTotalExpenses").textContent = money(totalExpenses);
       $("repNetProfit").textContent = money(netProfit);
-      $("repInvoicesCount").textContent = filteredInvoices.length;
 
       let detailsHtml = "";
       filteredInvoices.forEach((inv, idx) => {
@@ -958,6 +1040,17 @@
               <div class="muted">${new Date(inv.date).toLocaleString("en-GB")} | القطع: ${inv.items.reduce((s,i)=>s+i.quantity,0)}</div>
             </div>
             <div class="price">${money(inv.total)}</div>
+          </div>
+        `;
+      });
+      filteredReturns.forEach((ret, idx) => {
+        detailsHtml += `
+          <div class="item" style="border-color:#f8d7da;">
+            <div>
+              <div class="item-title">🔄 [مرتجع]: ${escapeHtml(ret.invoiceId)} - ${escapeHtml(ret.customerName)}</div>
+              <div class="muted">${new Date(ret.date).toLocaleString("en-GB")}</div>
+            </div>
+            <div class="price" style="color:var(--red);">-${money(ret.total)}</div>
           </div>
         `;
       });
@@ -977,15 +1070,21 @@
 
       $("repRangeText").textContent = `الفترة: ${startStr || 'البداية'} إلى ${endStr || 'الآن'}`;
       $("imgRepSales").textContent = money(totalSales);
+      $("imgRepReturns").textContent = "-" + money(totalReturns);
       $("imgRepExp").textContent = money(totalExpenses);
       $("imgRepNet").textContent = money(netProfit);
-      $("imgRepCount").textContent = filteredInvoices.length;
 
       let itemsHtml = "";
       if(filteredInvoices.length > 0) {
         itemsHtml += `<b>الفواتير:</b><br>`;
         filteredInvoices.forEach((inv, i) => {
           itemsHtml += `${i+1}. ${inv.id} (${inv.customerName}) — ${money(inv.total)}<br>`;
+        });
+      }
+      if(filteredReturns.length > 0) {
+        itemsHtml += `<br><b>المرتجعات:</b><br>`;
+        filteredReturns.forEach((r, i) => {
+          itemsHtml += `${i+1}. مرتجع ${r.invoiceId} — -${money(r.total)}<br>`;
         });
       }
       if(filteredExpenses.length > 0) {
