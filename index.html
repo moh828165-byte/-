@@ -180,7 +180,7 @@
       <button class="tab" data-view="invoicesView">📄 الفواتير</button>
       <button class="tab" data-view="returnsView">🔄 المرتجعات</button>
       <button class="tab" data-view="expensesView">💸 المصاريف</button>
-      <button class="tab" data-view="reportsView">📊 التقارير والأصناف الأكثر مبيعاً</button>
+      <button class="tab" data-view="reportsView">📊 التقارير</button>
     </nav>
 
     <!-- شاشة الكاشير -->
@@ -278,7 +278,7 @@
       </div>
     </section>
 
-    <!-- شاشة الفواتير -->
+    <!-- شاشة الفواتير (مع زرار الحذف والبحث) -->
     <section id="invoicesView" class="view hidden">
       <div class="panel">
         <h2>سجل الفواتير حسب اليوم والبحث[span_32](start_span)[span_32](end_span)</h2>
@@ -301,10 +301,10 @@
       </div>
     </section>
 
-    <!-- شاشة المرتجعات (جزئي أو كامل) -->
+    <!-- شاشة المرتجعات (مع إيصال مرتجع منفصل لكل صنف) -->
     <section id="returnsView" class="view hidden">
       <div class="panel">
-        <h2>🔄 قسم إدارة المرتجعات (بالقطعة أو الفاتورة كاملة)</h2>
+        <h2>🔄 قسم إدارة المرتجعات (إصدار إيصال مرتجع بالصنف)</h2>
         <div class="field full" style="margin-bottom:10px;">
           <label for="returnSearchInput">ابحث برقم الفاتورة أو اسم العميل:</label>
           <input id="returnSearchInput" autocomplete="off" placeholder="ادخل رقم الفاتورة (INV_...) أو اسم العميل..." oninput="renderReturnSearch()">
@@ -384,7 +384,6 @@
           </div>
         </div>
 
-        <!-- قسم الأصناف الأكثر مبيعاً -->
         <div class="card" style="margin-top:12px; background:#f9fbfa;">
           <h3 style="margin-bottom:8px;">🔥 الأصناف الأكثر مبيعاً خلال هذه الفترة</h3>
           <div id="topSellingList" style="font-size:13px;"></div>
@@ -432,7 +431,7 @@
       <div style="text-align:center; font-size:11px; color:#555;">مول الصعيدي للإدارة والتحكم 🙏[span_59](start_span)[span_59](end_span)</div>
     </div>
 
-    <!-- الفاتورة الرسمية -->
+    <!-- الفاتورة الرسمية أو إيصال المرتجع -->
     <section id="receipt" class="panel hidden"></section>
   </main>
 
@@ -722,7 +721,7 @@
       showReceipt(invoice);
     });
 
-    // --- نظام الفواتير والفلترة باليوم مع زرار الحذف ---
+    // --- نظام الفواتير والفلترة باليوم مع زرار الحذف الشغال ---
     window.clearDateFilter = function() {
       $("filterDate").value = "";
       renderInvoices();
@@ -779,7 +778,7 @@
       }
     };
 
-    // --- قسم المرتجعات (بالقطعة أو الفاتورة كاملة) ---
+    // --- قسم المرتجعات وتوليد فاتورة/إيصال مرتجع بالصنف ---
     function renderReturnSearch() {
       const q = $("returnSearchInput") ? $("returnSearchInput").value.trim().toLowerCase() : "";
       const found = invoices.filter(inv => {
@@ -791,13 +790,13 @@
         let itemsHtml = inv.items.map((item, idx) => `
           <div style="display:flex; justify-content:space-between; align-items:center; margin:4px 0; font-size:13px; background:#f9f9f9; padding:6px; border-radius:6px;">
             <span>${idx+1}. ${escapeHtml(item.name)} (الكمية: ${item.quantity}) - ${money(item.price * item.quantity)}</span>
-            <button class="small-button danger" onclick="returnItem('${inv.id}', '${item.id}')">🔄 إرجاع هذه القطعة</button>
+            <button class="small-button danger" onclick="returnItem('${inv.id}', '${item.id}')">🔄 إرجاع وإصدار إيصال</button>
           </div>
         `).join("");
 
         return `
           <div class="item" style="border-color:var(--green); display:block; margin-bottom:10px;">
-            <div style="display:flex; justify-content:between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
               <div>
                 <div class="item-title">فاتورة رقم: ${escapeHtml(inv.id)}</div>
                 <div class="muted">العميل: ${escapeHtml(inv.customerName)} | التاريخ: ${new Date(inv.date).toLocaleString("en-GB")}</div>
@@ -805,12 +804,12 @@
               <button class="danger" onclick="makeFullReturn('${inv.id}')">🔄 إرجاع الفاتورة بالكامل</button>
             </div>
             <div style="margin-top:8px; border-top:1px dashed #ddd; padding-top:6px;">
-              <div class="muted" style="margin-bottom:4px;">اختر الصنف المراد إرجاعه:</div>
+              <div class="muted" style="margin-bottom:4px;">اختر الصنف المراد إرجاعه وعمل إيصال له:</div>
               ${itemsHtml}
             </div>
           </div>
         `;
-      }).join("") : `<div class="empty">اكتب رقم الفاتورة أو اسم العميل للبحث عنها وإرجاع أصنافها.[span_89](start_span)[span_89](end_span)</div>`;
+      }).join("") : `<div class="empty">اكتب رقم الفاتورة أو اسم العميل للبحث عنها.[span_89](start_span)[span_89](end_span)</div>`;
     }
 
     window.returnItem = function(invoiceId, itemId) {
@@ -829,18 +828,24 @@
 
       const returnAmount = item.price * qtyToReturn;
 
+      // إرجاع المخزون
       const p = products.find(prod => prod.id === item.id);
       if(p) p.stock += qtyToReturn;
 
-      returns.push({
+      // إنشاء كائن إيصال المرتجع
+      const returnObj = {
         id: "RET_" + Math.random().toString(36).substr(2, 6).toUpperCase(),
         invoiceId: inv.id,
         date: new Date().toISOString(),
         customerName: inv.customerName,
+        customerPhone: inv.customerPhone,
         items: [{ name: item.name, quantity: qtyToReturn, price: item.price }],
         total: returnAmount
-      });
+      };
 
+      returns.push(returnObj);
+
+      // خصم الكمية من الفاتورة الأصلية
       item.quantity -= qtyToReturn;
       inv.subtotal -= returnAmount;
       inv.total = Math.max(0, inv.subtotal - inv.discount);
@@ -852,47 +857,110 @@
       }
 
       saveData();
-      alert(`✅ تم إرجاع (${qtyToReturn}) من الصنف (${item.name}) بنجاح بقيمة ${money(returnAmount)}[span_91](start_span)[span_91](end_span)!`);
-      renderReturnSearch();
-      renderReturnsList();
+      showReturnReceipt(returnObj);
     };
 
     window.makeFullReturn = function(invoiceId) {
       const inv = invoices.find(i => i.id === invoiceId);
-      if(!inv) return alert("الفاتورة غير موجودة[span_92](start_span)[span_92](end_span)!");
-      if(confirm(`هل أنت متأكد من عمل مرتجع كامل للفاتورة [${inv.id}] بمبلغ ${money(inv.total)} وإرجاع كافة أصنافها للمخزن؟[span_93](start_span)[span_93](end_span)`)) {
+      if(!inv) return alert("الفاتورة غير موجودة[span_91](start_span)[span_91](end_span)!");
+      if(confirm(`هل أنت متأكد من عمل مرتجع كامل للفاتورة [${inv.id}] بمبلغ ${money(inv.total)} وإرجاع كافة أصنافها للمخزن؟[span_92](start_span)[span_92](end_span)`)) {
         inv.items.forEach(item => {
           const p = products.find(prod => prod.id === item.id);
           if(p) p.stock += item.quantity;
         });
 
-        returns.push({
+        const returnObj = {
           id: "RET_" + Math.random().toString(36).substr(2, 6).toUpperCase(),
           invoiceId: inv.id,
           date: new Date().toISOString(),
           customerName: inv.customerName,
+          customerPhone: inv.customerPhone,
           items: inv.items,
           total: inv.total
-        });
+        };
 
+        returns.push(returnObj);
         invoices = invoices.filter(i => i.id !== invoiceId);
         saveData();
-        alert("✅ تم تنفيذ المرتجع الكامل بنجاح[span_94](start_span)[span_94](end_span)!");
-        renderReturnSearch();
-        renderReturnsList();
+        showReturnReceipt(returnObj);
       }
     };
+
+    function showReturnReceipt(ret) {
+      const d = new Date(ret.date);
+      const dateStr = d.toLocaleDateString("en-GB");
+      const timeStr = d.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' });
+
+      const tableRows = ret.items.map(i => `
+        <tr>
+          <td style="padding:4px 0; border-bottom:1px dashed #eee;">${escapeHtml(i.name)}</td>
+          <td style="text-align:center; padding:4px 0; border-bottom:1px dashed #eee;">${i.quantity}</td>
+          <td style="text-align:center; padding:4px 0; border-bottom:1px dashed #eee;">${Number(i.price).toFixed(2)}</td>
+          <td style="text-align:left; padding:4px 0; border-bottom:1px dashed #eee;">${Number(i.price * i.quantity).toFixed(2)} EGP</td>
+        </tr>
+      `).join("");
+
+      $("receipt").innerHTML = `
+        <div id="receiptContent" style="background:#fff; padding:20px; border-radius:10px; max-width:420px; margin:0 auto; font-family:monospace; line-height:1.5;">
+          <div style="text-align:center;">
+            <h2 style="margin:0; font-size:20px; font-weight:bold; color:var(--red);">إيصال مرتجع بضاعة</h2>
+            <div style="font-size:14px; font-weight:bold;">مول الصعيدي</div>
+            <div style="font-size:12px; color:#555;">مرتجع للفاتورة: ${escapeHtml(ret.invoiceId)}</div>
+          </div>
+          <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+          <div style="font-size:13px;">
+            <div><strong>رقم المرتجع:</strong> ${escapeHtml(ret.id)}</div>
+            <div><strong>التاريخ:</strong> ${dateStr} &nbsp;&nbsp; <strong>الساعة:</strong> ${timeStr}</div>
+            <div><strong>اسم العميل:</strong> ${escapeHtml(ret.customerName)}</div>
+            <div><strong>رقم الهاتف:</strong> ${escapeHtml(ret.customerPhone)}</div>
+          </div>
+          <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+          
+          <table style="width:100%; font-size:12px; border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid #333;">
+                <th style="text-align:right; padding-bottom:4px;">الصنف</th>
+                <th style="text-align:center; padding-bottom:4px;">الكمية</th>
+                <th style="text-align:center; padding-bottom:4px;">السعر</th>
+                <th style="text-align:left; padding-bottom:4px;">الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+          
+          <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+          <div style="font-size:14px; text-align:center;">
+            <div>إجمالي المبلغ المرتجع للعميل: <strong style="color:var(--red);">${money(ret.total)}</strong></div>
+          </div>
+          <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
+          <div style="font-size:11px; text-align:center; color:#444;">
+            تم إرجاع الأصناف للمخزن وتحديث الحسابات بنجاح.<br>
+            <strong>شكرًا لتفهمكم — مول الصعيدي 🙏</strong>
+          </div>
+        </div>
+        <div class="actions no-print" style="margin-top:12px; display:flex; justify-content:center; gap:8px;">
+          <button class="primary" onclick="shareReceiptImage()">📸 مشاركة إيصال المرتجع (واتساب)</button>
+        </div>
+      `;
+      $("receipt").classList.remove("hidden");
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
 
     function renderReturnsList() {
       $("returnsList").innerHTML = returns.length ? [...returns].reverse().map(ret => `
         <div class="item" style="border-color:#f8d7da;">
           <div>
-            <div class="item-title">مرتجع للفاتورة: ${escapeHtml(ret.invoiceId)} (مرتجع #${ret.id})</div>
-            <div class="muted">${new Date(ret.date).toLocaleString("en-GB")} | العميل: ${escapeHtml(ret.customerName)}[span_95](start_span)[span_95](end_span)</div>
+            <div class="item-title">مرتجع فاتورة: ${escapeHtml(ret.invoiceId)} (مرتجع #${ret.id})</div>
+            <div class="muted">${new Date(ret.date).toLocaleString("en-GB")} | العميل: ${escapeHtml(ret.customerName)}[span_93](start_span)[span_93](end_span)</div>
             <div class="price" style="color:var(--red);">قيمة المرتجع: -${money(ret.total)}</div>
           </div>
+          <div>
+            <button class="secondary" onclick="showReturnReceipt(returns.find(r=>r.id==='${ret.id}'))">عرض الإيصال</button>
+          </div>
         </div>
-      `).join("") : `<div class="empty">لا توجد مرتجعات مسجلة.[span_96](start_span)[span_96](end_span)</div>`;
+      `).join("") : `<div class="empty">لا توجد مرتجعات مسجلة.[span_94](start_span)[span_94](end_span)</div>`;
     }
 
     function showReceipt(inv) {
@@ -913,25 +981,25 @@
       $("receipt").innerHTML = `
         <div id="receiptContent" style="background:#fff; padding:20px; border-radius:10px; max-width:420px; margin:0 auto; font-family:monospace; line-height:1.5;">
           <div style="text-align:center;">
-            <h2 style="margin:0; font-size:20px; font-weight:bold;">مول الصعيدي[span_97](start_span)[span_97](end_span)</h2>
-            <div style="font-size:13px; color:#555;">ملابس أطفال وكماليات[span_98](start_span)[span_98](end_span)</div>
+            <h2 style="margin:0; font-size:20px; font-weight:bold;">مول الصعيدي[span_95](start_span)[span_95](end_span)</h2>
+            <div style="font-size:13px; color:#555;">ملابس أطفال وكماليات[span_96](start_span)[span_96](end_span)</div>
           </div>
           <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
           <div style="font-size:13px;">
             <div><strong>رقم الفاتورة:</strong> ${escapeHtml(inv.id)}</div>
             <div><strong>التاريخ:</strong> ${dateStr} &nbsp;&nbsp; <strong>الساعة:</strong> ${timeStr}</div>
-            <div><strong>اسم العميل:</strong> ${escapeHtml(inv.customerName)}[span_99](start_span)[span_99](end_span)</div>
-            <div><strong>رقم الهاتف:</strong> ${escapeHtml(inv.customerPhone)}[span_100](start_span)[span_100](end_span)</div>
+            <div><strong>اسم العميل:</strong> ${escapeHtml(inv.customerName)}[span_97](start_span)[span_97](end_span)</div>
+            <div><strong>رقم الهاتف:</strong> ${escapeHtml(inv.customerPhone)}[span_98](start_span)[span_98](end_span)</div>
           </div>
           <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
           
           <table style="width:100%; font-size:12px; border-collapse:collapse;">
             <thead>
               <tr style="border-bottom:1px solid #333;">
-                <th style="text-align:right; padding-bottom:4px;">الصنف[span_101](start_span)[span_101](end_span)</th>
-                <th style="text-align:center; padding-bottom:4px;">الكمية[span_102](start_span)[span_102](end_span)</th>
-                <th style="text-align:center; padding-bottom:4px;">السعر[span_103](start_span)[span_103](end_span)</th>
-                <th style="text-align:left; padding-bottom:4px;">الإجمالي[span_104](start_span)[span_104](end_span)</th>
+                <th style="text-align:right; padding-bottom:4px;">الصنف[span_99](start_span)[span_99](end_span)</th>
+                <th style="text-align:center; padding-bottom:4px;">الكمية[span_100](start_span)[span_100](end_span)</th>
+                <th style="text-align:center; padding-bottom:4px;">السعر[span_101](start_span)[span_101](end_span)</th>
+                <th style="text-align:left; padding-bottom:4px;">الإجمالي[span_102](start_span)[span_102](end_span)</th>
               </tr>
             </thead>
             <tbody>
@@ -941,24 +1009,24 @@
           
           <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
           <div style="font-size:13px;">
-            <div style="display:flex; justify-content:space-between;"><span>عدد القطع:[span_105](start_span)[span_105](end_span)</span> <strong>${totalPieces}</strong></div>
-            <div style="display:flex; justify-content:space-between;"><span>الإجمالي:[span_106](start_span)[span_106](end_span)</span> <strong>${money(inv.subtotal)}</strong></div>
-            ${inv.discount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>الخصم:[span_107](start_span)[span_107](end_span)</span> <strong>${money(inv.discount)}</strong></div>` : ''}
-            <div style="display:flex; justify-content:space-between; font-size:15px; margin-top:4px;"><span>المطلوب:[span_108](start_span)[span_108](end_span)</span> <strong>${money(inv.total)}</strong></div>
-            <div style="display:flex; justify-content:space-between;"><span>المدفوع:[span_109](start_span)[span_109](end_span)</span> <strong>${money(inv.paid)}</strong></div>
-            <div style="display:flex; justify-content:space-between;"><span>المتبقي:[span_110](start_span)[span_110](end_span)</span> <strong>${money(inv.remaining)}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>عدد القطع:[span_103](start_span)[span_103](end_span)</span> <strong>${totalPieces}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>الإجمالي:[span_104](start_span)[span_104](end_span)</span> <strong>${money(inv.subtotal)}</strong></div>
+            ${inv.discount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>الخصم:[span_105](start_span)[span_105](end_span)</span> <strong>${money(inv.discount)}</strong></div>` : ''}
+            <div style="display:flex; justify-content:space-between; font-size:15px; margin-top:4px;"><span>المطلوب:[span_106](start_span)[span_106](end_span)</span> <strong>${money(inv.total)}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>المدفوع:[span_107](start_span)[span_107](end_span)</span> <strong>${money(inv.paid)}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>المتبقي:[span_108](start_span)[span_108](end_span)</span> <strong>${money(inv.remaining)}</strong></div>
           </div>
           <hr style="border:0; border-top:1px dashed #333; margin:10px 0;">
           <div style="font-size:11px; text-align:center; color:#444; line-height:1.4;">
-            <strong>سياسة الاستبدال والاسترجاع:[span_111](start_span)[span_111](end_span)</strong><br>
-            الاستبدال خلال 7 أيام، والاسترجاع خلال 3 أيام[span_112](start_span)[span_112](end_span)<br>
-            بشرط وجود الفاتورة وبقاء المنتج بحالته الأصلية.[span_113](start_span)[span_113](end_span)<br><br>
-            <strong>شكرًا لتسوقكم من مول الصعيدي 🙏[span_114](start_span)[span_114](end_span)</strong>
+            <strong>سياسة الاستبدال والاسترجاع:[span_109](start_span)[span_109](end_span)</strong><br>
+            الاستبدال خلال 7 أيام، والاسترجاع خلال 3 أيام[span_110](start_span)[span_110](end_span)<br>
+            بشرط وجود الفاتورة وبقاء المنتج بحالته الأصلية.[span_111](start_span)[span_111](end_span)<br><br>
+            <strong>شكرًا لتسوقكم من مول الصعيدي 🙏[span_112](start_span)[span_112](end_span)</strong>
           </div>
         </div>
         <div class="actions no-print" style="margin-top:12px; display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-          <button class="primary" onclick="shareReceiptImage()">📸 حفظ ومشاركة كصورة (واتساب)[span_115](start_span)[span_115](end_span)</button>
-          <button class="secondary" onclick="window.print()">🖨️ طباعة الإيصال[span_116](start_span)[span_116](end_span)</button>
+          <button class="primary" onclick="shareReceiptImage()">📸 حفظ ومشاركة كصورة (واتساب)[span_113](start_span)[span_113](end_span)</button>
+          <button class="secondary" onclick="window.print()">🖨️ طباعة الإيصال[span_114](start_span)[span_114](end_span)</button>
         </div>
       `;
       $("receipt").classList.remove("hidden");
@@ -973,7 +1041,7 @@
             navigator.share({ files: [file], title: 'فاتورة مول الصعيدي' });
           } else {
             let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Invoice_Saidi_Mall.png'; a.click();
-            alert("تم حفظ صورة الفاتورة على جهازك.[span_117](start_span)[span_117](end_span)");
+            alert("تم حفظ صورة الفاتورة على جهازك.[span_115](start_span)[span_115](end_span)");
           }
         });
       });
@@ -981,10 +1049,10 @@
 
     window.shareDayInvoicesImage = function() {
       const dateVal = $("filterDate").value;
-      if(!dateVal) return alert("برجاء تحديد يوم معين أولاً لعرض ومشاركة فواتيره[span_118](start_span)[span_118](end_span)!");
+      if(!dateVal) return alert("برجاء تحديد يوم معين أولاً لعرض ومشاركة فواتيره[span_116](start_span)[span_116](end_span)!");
 
       const dayInvoices = invoices.filter(inv => inv.date.slice(0, 10) === dateVal);
-      if(!dayInvoices.length) return alert("لا توجد فواتير مسجلة في هذا اليوم.[span_119](start_span)[span_119](end_span)");
+      if(!dayInvoices.length) return alert("لا توجد فواتير مسجلة في هذا اليوم.[span_117](start_span)[span_117](end_span)");
 
       $("imgDayTitle").textContent = `تاريخ اليوم: ${dateVal}`;
       let contentHtml = `<b>إجمالي الفواتير: ${dayInvoices.length}</b><br><br>`;
@@ -1012,18 +1080,18 @@
             navigator.share({ files: [file], title: 'فواتير يوم مول الصعيدي' });
           } else {
             let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `SaidiMall_Invoices_${dateVal}.png`; a.click();
-            alert("تم حفظ صورة فواتير اليوم على جهازك.[span_120](start_span)[span_120](end_span)");
+            alert("تم حفظ صورة فواتير اليوم على جهازك.[span_118](start_span)[span_118](end_span)");
           }
         });
       });
     };
 
-    // --- إدارة المصاريف بالتاريخ والوقت ---
+    // --- إدارة المصاريف ---
     $("expenseForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const title = $("expenseTitle").value.trim();
       const amount = Number($("expenseAmount").value);
-      if(!title || amount <= 0) return alert("أدخل بيانات صحيحة للمصروف.[span_121](start_span)[span_121](end_span)");
+      if(!title || amount <= 0) return alert("أدخل بيانات صحيحة للمصروف.[span_119](start_span)[span_119](end_span)");
 
       expenses.push({ id: "EXP_" + Date.now().toString(36), title, amount, date: new Date().toISOString() });
       saveData();
@@ -1036,14 +1104,14 @@
         <div class="item">
           <div>
             <div class="item-title">${escapeHtml(e.title)}</div>
-            <div class="muted">${new Date(e.date).toLocaleString("en-GB")}[span_122](start_span)[span_122](end_span)</div>
+            <div class="muted">${new Date(e.date).toLocaleString("en-GB")}[span_120](start_span)[span_120](end_span)</div>
           </div>
           <div class="row">
             <span class="price" style="color:var(--red);">${money(e.amount)}</span>
-            <button class="danger" onclick="deleteExpense('${e.id}')">حذف[span_123](start_span)[span_123](end_span)</button>
+            <button class="danger" onclick="deleteExpense('${e.id}')">حذف[span_121](start_span)[span_121](end_span)</button>
           </div>
         </div>
-      `).join("") : `<div class="empty">لا توجد مصاريف مسجلة.[span_124](start_span)[span_124](end_span)</div>`;
+      `).join("") : `<div class="empty">لا توجد مصاريف مسجلة.[span_122](start_span)[span_122](end_span)</div>`;
     }
 
     window.deleteExpense = function(id) {
@@ -1052,7 +1120,7 @@
       renderExpenses();
     };
 
-    // --- إدارة الفترات والتقارير مع الأصناف الأكثر مبيعاً ---
+    // --- التقارير والأصناف الأكثر مبيعاً ---
     window.setReportPeriod = function(type) {
       const now = new Date();
       let start = "", end = "";
@@ -1104,7 +1172,7 @@
       $("repTotalExpenses").textContent = money(totalExpenses);
       $("repNetProfit").textContent = money(netProfit);
 
-      // حساب الأصناف الأكثر مبيعاً خلال الفتره
+      // الأصناف الأكثر مبيعاً
       let itemSalesMap = {};
       filteredInvoices.forEach(inv => {
         inv.items.forEach(item => {
@@ -1130,20 +1198,19 @@
           topPrintHtml += `${idx+1}. ${escapeHtml(item.name)} (الكمية: ${item.qty})<br>`;
         });
       } else {
-        topListHtml = `<div class="muted">لا توجد مبيعات أصناف في هذه الفترة.[span_125](start_span)[span_125](end_span)</div>`;
+        topListHtml = `<div class="muted">لا توجد مبيعات أصناف في هذه الفترة.[span_123](start_span)[span_123](end_span)</div>`;
         topPrintHtml += `لا توجد مبيعات أصناف.<br>`;
       }
       $("topSellingList").innerHTML = topListHtml;
       $("imgTopSellingPrint").innerHTML = topPrintHtml;
 
-      // تفاصيل الحركات
       let detailsHtml = "";
       filteredInvoices.forEach((inv, idx) => {
         detailsHtml += `
           <div class="item">
             <div>
-              <div class="item-title">${idx + 1}. [فاتورة: ${inv.id}] - ${escapeHtml(inv.customerName)}[span_126](start_span)[span_126](end_span)</div>
-              <div class="muted">${new Date(inv.date).toLocaleString("en-GB")} | القطع: ${inv.items.reduce((s,i)=>s+i.quantity,0)}[span_127](start_span)[span_127](end_span)</div>
+              <div class="item-title">${idx + 1}. [فاتورة: ${inv.id}] - ${escapeHtml(inv.customerName)}[span_124](start_span)[span_124](end_span)</div>
+              <div class="muted">${new Date(inv.date).toLocaleString("en-GB")} | القطع: ${inv.items.reduce((s,i)=>s+i.quantity,0)}[span_125](start_span)[span_125](end_span)</div>
             </div>
             <div class="price">${money(inv.total)}</div>
           </div>
@@ -1153,8 +1220,8 @@
         detailsHtml += `
           <div class="item" style="border-color:#f8d7da;">
             <div>
-              <div class="item-title">🔄 [مرتجع]: فاتورة ${escapeHtml(ret.invoiceId)} - ${escapeHtml(ret.customerName)}[span_128](start_span)[span_128](end_span)</div>
-              <div class="muted">${new Date(ret.date).toLocaleString("en-GB")}[span_129](start_span)[span_129](end_span)</div>
+              <div class="item-title">🔄 [إيصال مرتجع]: #${escapeHtml(ret.id)} (فاتورة ${escapeHtml(ret.invoiceId)})</div>
+              <div class="muted">${new Date(ret.date).toLocaleString("en-GB")} | العميل: ${escapeHtml(ret.customerName)}[span_126](start_span)[span_126](end_span)</div>
             </div>
             <div class="price" style="color:var(--red);">-${money(ret.total)}</div>
           </div>
@@ -1164,17 +1231,17 @@
         detailsHtml += `
           <div class="item" style="border-color:#f8d7da;">
             <div>
-              <div class="item-title">💸 [مصروف]: ${escapeHtml(exp.title)}[span_130](start_span)[span_130](end_span)</div>
-              <div class="muted">${new Date(exp.date).toLocaleString("en-GB")}[span_131](start_span)[span_131](end_span)</div>
+              <div class="item-title">💸 [مصروف]: ${escapeHtml(exp.title)}[span_127](start_span)[span_127](end_span)</div>
+              <div class="muted">${new Date(exp.date).toLocaleString("en-GB")}[span_128](start_span)[span_128](end_span)</div>
             </div>
             <div class="price" style="color:var(--red);">${money(exp.amount)}</div>
           </div>
         `;
       });
 
-      $("reportDetailsList").innerHTML = detailsHtml || `<div class="empty">لا توجد حركات في هذه الفترة.[span_132](start_span)[span_132](end_span)</div>`;
+      $("reportDetailsList").innerHTML = detailsHtml || `<div class="empty">لا توجد حركات في هذه الفترة.[span_129](start_span)[span_129](end_span)</div>`;
 
-      $("repRangeText").textContent = `الفترة: ${startStr || 'البداية'} إلى ${endStr || 'الآن'}[span_133](start_span)[span_133](end_span)`;
+      $("repRangeText").textContent = `الفترة: ${startStr || 'البداية'} إلى ${endStr || 'الآن'}[span_130](start_span)[span_130](end_span)`;
       $("imgRepSales").textContent = money(totalSales);
       $("imgRepReturns").textContent = "-" + money(totalReturns);
       $("imgRepExp").textContent = money(totalExpenses);
@@ -1182,24 +1249,24 @@
 
       let itemsHtml = "";
       if(filteredInvoices.length > 0) {
-        itemsHtml += `<b>الفواتير:[span_134](start_span)[span_134](end_span)</b><br>`;
+        itemsHtml += `<b>الفواتير:[span_131](start_span)[span_131](end_span)</b><br>`;
         filteredInvoices.forEach((inv, i) => {
           itemsHtml += `${i+1}. ${inv.id} (${inv.customerName}) — ${money(inv.total)}<br>`;
         });
       }
       if(filteredReturns.length > 0) {
-        itemsHtml += `<br><b>المرتجعات:[span_135](start_span)[span_135](end_span)</b><br>`;
+        itemsHtml += `<br><b>المرتجعات:[span_132](start_span)[span_132](end_span)</b><br>`;
         filteredReturns.forEach((r, i) => {
-          itemsHtml += `${i+1}. مرتجع ${r.invoiceId} — -${money(r.total)}<br>`;
+          itemsHtml += `${i+1}. إيصال مرتجع ${r.id} — -${money(r.total)}<br>`;
         });
       }
       if(filteredExpenses.length > 0) {
-        itemsHtml += `<br><b>المصاريف:[span_136](start_span)[span_136](end_span)</b><br>`;
+        itemsHtml += `<br><b>المصاريف:[span_133](start_span)[span_133](end_span)</b><br>`;
         filteredExpenses.forEach((e, i) => {
           itemsHtml += `${i+1}. ${e.title} — ${money(e.amount)}<br>`;
         });
       }
-      $("imgRepItemsList").innerHTML = itemsHtml || `لا توجد حركات.[span_137](start_span)[span_137](end_span)`;
+      $("imgRepItemsList").innerHTML = itemsHtml || `لا توجد حركات.[span_134](start_span)[span_134](end_span)`;
     }
 
     window.shareReportImage = function() {
@@ -1213,7 +1280,7 @@
             navigator.share({ files: [file], title: 'تقرير مبيعات مول الصعيدي' });
           } else {
             let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'SaidiMall_Report.png'; a.click();
-            alert("تم حفظ صورة التقرير على جهازك.[span_138](start_span)[span_138](end_span)");
+            alert("تم حفظ صورة التقرير على جهازك.[span_135](start_span)[span_135](end_span)");
           }
         });
       });
