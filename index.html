@@ -325,12 +325,11 @@
       </div>
     </section>
 
-    <!-- شاشة التقارير (مع أزرار الفترة: اليوم، هذا الشهر، كل الفترة، ومن تاريخ إلى تاريخ) -->
+    <!-- شاشة التقارير -->
     <section id="reportsView" class="view hidden">
       <div class="panel">
         <h2>📊 تقارير المبيعات وكشف الحساب بالفترة</h2>
         
-        <!-- أزرار الاختيار السريع للفترات اللي طلبتها -->
         <div style="display:flex; gap:6px; margin-bottom:10px;" class="no-print">
           <button class="small-button primary" onclick="setReportPeriod('today')">اليوم</button>
           <button class="small-button secondary" onclick="setReportPeriod('month')">هذا الشهر</button>
@@ -374,7 +373,6 @@
         <div id="reportDetailsList" class="invoice-list" style="margin-top:10px;"></div>
       </div>
 
-      <!-- عنصر مخفي لتوليد صورة التقرير للواتساب -->
       <div id="printableReportCard" style="display:none; background:#fff; padding:20px; width:450px; font-family:monospace; direction:rtl;">
         <div style="text-align:center;">
           <h2 style="margin:0; font-size:22px;">مول الصعيدي</h2>
@@ -809,23 +807,14 @@
             <strong>شكرًا لتسوقكم من مول الصعيدي 🙏</strong>
           </div>
         </div>
-        <div class="actions no-print" style="margin-top:12px; display:flex; justify-content:center; gap:8px;">
-          <button class="primary" onclick="safePrintReceipt()">🖨️ طباعة أو حفظ الفاتورة</button>
-          <button class="secondary" onclick="shareReceiptImage()">📱 مشاركة الفاتورة صورة واتساب</button>
+        <div class="actions no-print" style="margin-top:12px; display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+          <button class="primary" onclick="shareReceiptImage()">📸 حفظ ومشاركة كصورة (بديل الطباعة)</button>
+          <button class="secondary" onclick="window.print()">🖨️ طباعة الإيصال (عادي)</button>
         </div>
       `;
       $("receipt").classList.remove("hidden");
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
-
-    // دالة طباعة مدعومة لتطبيقات الويب (تتخطى مشاكل حظر النافذة في PWA)
-    window.safePrintReceipt = function() {
-      try {
-        window.print();
-      } catch(e) {
-        shareReceiptImage();
-      }
-    };
 
     window.shareReceiptImage = function() {
       html2canvas($("receiptContent"), { scale: 2 }).then(canvas => {
@@ -835,7 +824,7 @@
             navigator.share({ files: [file], title: 'فاتورة مول الصعيدي' });
           } else {
             let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Invoice_Saidi_Mall.png'; a.click();
-            alert("تم حفظ صورة الفاتورة على جهازك.");
+            alert("تم حفظ صورة الفاتورة على جهازك بنجاح.");
           }
         });
       });
@@ -960,7 +949,6 @@
       $("repNetProfit").textContent = money(netProfit);
       $("repInvoicesCount").textContent = filteredInvoices.length;
 
-      // دمج عرض الفواتير والمصاريف في تفاصيل حركات الفترة
       let detailsHtml = "";
       filteredInvoices.forEach((inv, idx) => {
         detailsHtml += `
@@ -987,7 +975,6 @@
 
       $("reportDetailsList").innerHTML = detailsHtml || `<div class="empty">لا توجد حركات في هذه الفترة.</div>`;
 
-      // تجهيز كارت صورة التقرير للواتساب
       $("repRangeText").textContent = `الفترة: ${startStr || 'البداية'} إلى ${endStr || 'الآن'}`;
       $("imgRepSales").textContent = money(totalSales);
       $("imgRepExp").textContent = money(totalExpenses);
